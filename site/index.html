@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toolbelt para macOS: seis utilitários da barra de menus num app só</title>
+<meta name="description" content="Toolbelt junta num app leve o que você usava em vários: ícones escondidos atrás do notch, alternador de janelas, histórico da área de transferência, atalhos de janela, monitor de memória e disco e troca de contas do Claude Code.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#EEF0F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A1C20" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/app-icon.png">
+<link rel="preload" href="assets/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/site.css">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:site_name" content="Toolbelt">
+<meta property="og:url" content="https://toolbelt.oconde.dev/">
+<meta property="og:title" content="Toolbelt: seis apps da barra de menus viram um só">
+<meta property="og:description" content="Ícones escondidos atrás do notch, alternador de janelas, área de transferência, atalhos de janela, monitor do sistema e contas do Claude Code. Uns 15 MB de memória, notarizado pela Apple.">
+<meta property="og:image" content="https://toolbelt.oconde.dev/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Barra de menus do Mac com o ícone do Toolbelt e o painel aberto.">
+<meta name="twitter:card" content="summary_large_image">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+  <symbol id="belt-closed" viewBox="0 0 18 18">
+    <path fill-rule="evenodd" d="M9.4 6.25H14.25A2.75 2.75 0 0 1 14.25 11.75H9.4Z M11.9 9a0.7 0.7 0 1 0 1.4 0a0.7 0.7 0 1 0-1.4 0Z M14.3 9a0.7 0.7 0 1 0 1.4 0a0.7 0.7 0 1 0-1.4 0Z"/>
+    <path fill-rule="evenodd" d="M3.9 3H6.1A2.4 2.4 0 0 1 8.5 5.4V12.6A2.4 2.4 0 0 1 6.1 15H3.9A2.4 2.4 0 0 1 1.5 12.6V5.4A2.4 2.4 0 0 1 3.9 3Z M4.3 4.6H5.7A1.2 1.2 0 0 1 6.9 5.8V12.2A1.2 1.2 0 0 1 5.7 13.4H4.3A1.2 1.2 0 0 1 3.1 12.2V5.8A1.2 1.2 0 0 1 4.3 4.6Z"/>
+    <rect x="3.1" y="8.35" width="4.6" height="1.3" rx="0.65"/>
+  </symbol>
+  <symbol id="belt-open" viewBox="0 0 18 18">
+    <path fill-rule="evenodd" d="M9.4 6.25H14.25A2.75 2.75 0 0 1 14.25 11.75H9.4Z M11.9 9a0.7 0.7 0 1 0 1.4 0a0.7 0.7 0 1 0-1.4 0Z M14.3 9a0.7 0.7 0 1 0 1.4 0a0.7 0.7 0 1 0-1.4 0Z"/>
+    <rect x="1.5" y="3" width="7" height="12" rx="2.4"/>
+  </symbol>
+  <symbol id="glyph-chip" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="3" y="4" width="10" height="8" rx="1.6"/><path d="M5.5 2v2M8 2v2M10.5 2v2M5.5 12v2M8 12v2M10.5 12v2"/></g></symbol>
+  <symbol id="glyph-terminal" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M4.5 6l2 2-2 2M8.5 10h3"/></g></symbol>
+  <symbol id="glyph-check" viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="glyph-gear" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="4"/><circle cx="8" cy="8" r="1.6"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></g></symbol>
+  <symbol id="glyph-power" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 1.8v6"/><path d="M4.6 4.2a5.2 5.2 0 1 0 6.8 0"/></g></symbol>
+  <symbol id="glyph-clipboard" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="3" y="3" width="10" height="11.5" rx="1.6"/><rect x="5.8" y="1.5" width="4.4" height="2.8" rx="0.9"/></g></symbol>
+  <symbol id="glyph-arrange" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="13" height="13" rx="2.6"/><path d="M4.5 8h7M6.2 6.3L4.5 8l1.7 1.7M9.8 6.3L11.5 8 9.8 9.7"/></g></symbol>
+  <symbol id="glyph-split" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="3" width="13" height="10" rx="1.6"/><path d="M8 3v10"/></g></symbol>
+  <symbol id="glyph-report" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M10.5 6.5V2.8a1.3 1.3 0 0 0-1.3-1.3H3.8a1.3 1.3 0 0 0-1.3 1.3v9.4a1.3 1.3 0 0 0 1.3 1.3H7"/><path d="M4.8 4.5h3.5M4.8 7h2.5"/><circle cx="10.8" cy="10.8" r="2.4"/><path d="M12.6 12.6l1.9 1.9"/></g></symbol>
+  <symbol id="glyph-wifi" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.8 6.2a9 9 0 0 1 12.4 0"/><path d="M4.2 8.8a5.6 5.6 0 0 1 7.6 0"/></g><circle cx="8" cy="11.8" r="1.2" fill="currentColor"/></symbol>
+  <symbol id="glyph-battery" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="4.8" width="12" height="6.4" rx="1.8"/></g><rect x="13.8" y="6.8" width="1.2" height="2.4" rx="0.5" fill="currentColor"/><rect x="2.5" y="6.3" width="7" height="3.4" rx="0.8" fill="currentColor"/></symbol>
+  <symbol id="glyph-cloud" viewBox="0 0 16 16"><path d="M4.6 12.5h7a2.8 2.8 0 0 0 .2-5.6A4 4 0 0 0 4.2 8a2.3 2.3 0 0 0 .4 4.5Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="glyph-music" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M6 12V3.6l7-1.4v8.4"/><circle cx="4.4" cy="12" r="1.7"/><circle cx="11.4" cy="10.6" r="1.7"/></g></symbol>
+  <symbol id="glyph-shield" viewBox="0 0 16 16"><path d="M8 1.8l5 2v4c0 3.2-2.2 5.3-5 6.4-2.8-1.1-5-3.2-5-6.4v-4Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="glyph-timer" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="9" r="5.2"/><path d="M8 9V6.2M6.4 1.8h3.2"/></g></symbol>
+  <symbol id="glyph-display" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="1.5" y="2.5" width="13" height="8.5" rx="1.5"/><path d="M6 14h4M8 11v3"/></g></symbol>
+  <symbol id="glyph-keyboard" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1" y="4" width="14" height="8" rx="1.6"/><path d="M3.6 6.6h.8M6 6.6h.8M8.4 6.6h.8M10.8 6.6h1.4M4.6 9.4h6.8"/></g></symbol>
+  <symbol id="glyph-camera" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M1.5 6a1.5 1.5 0 0 1 1.5-1.5h1.8l1-1.8h4.4l1 1.8H13A1.5 1.5 0 0 1 14.5 6v6a1.5 1.5 0 0 1-1.5 1.5H3A1.5 1.5 0 0 1 1.5 12Z"/><circle cx="8" cy="9" r="2.4"/></g></symbol>
+  <symbol id="glyph-download" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M8 4.2v6.4M5.2 8l2.8 2.8L10.8 8" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="glyph-bolt" viewBox="0 0 16 16"><path d="M9 1.5L3.5 9H8l-1 5.5L12.5 7H8Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="glyph-bell" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M4 11V7.4a4 4 0 0 1 8 0V11l1.2 1.4H2.8Z"/><path d="M6.6 14a1.4 1.4 0 0 0 2.8 0"/></g></symbol>
+  <symbol id="glyph-globe" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6.2"/><ellipse cx="8" cy="8" rx="2.6" ry="6.2"/><path d="M1.8 8h12.4"/></g></symbol>
+  <symbol id="glyph-headphones" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2.5 10.5V8a5.5 5.5 0 0 1 11 0v2.5"/><rect x="2" y="9.5" width="3" height="4.5" rx="1"/><rect x="11" y="9.5" width="3" height="4.5" rx="1"/></g></symbol>
+  <symbol id="glyph-chevron" viewBox="0 0 16 16"><path d="M6 3.5L10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+<header class="menubar">
+  <nav class="menubar__menus" aria-label="Seções da página">
+    <a class="menubar__app" href="#topo"><svg class="menubar__app-icon" aria-hidden="true"><use href="#belt-closed"/></svg><span>Toolbelt</span></a>
+    <a class="menubar__link" href="#recursos">Recursos</a>
+    <a class="menubar__link" href="#instalacao">Instalação</a>
+    <a class="menubar__link" href="#perguntas">Perguntas</a>
+  </nav>
+  <div class="menubar__status">
+    <span class="status-item status-item--monitor" aria-hidden="true"><svg class="status-item__glyph"><use href="#glyph-chip"/></svg>62% · 210 GB</span>
+    <span class="status-item status-item--claude" aria-hidden="true"><span class="account-badge account-badge--one account-badge--small">1</span>22%</span>
+    <button class="status-item status-item--belt" type="button" aria-expanded="true" aria-controls="hero-panel" aria-label="Mostrar ou esconder o painel do Toolbelt">
+      <svg class="status-item__belt" aria-hidden="true"><use href="#belt-open"/></svg>
+    </button>
+    <span class="status-item status-item--clock" id="menubar-clock" aria-hidden="true">qui 22 out 17:16</span>
+  </div>
+</header>
+
+<main id="topo">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero__copy" id="conteudo">
+      <h1 class="hero__title" id="hero-title">Seis apps da barra de menus viram um só.</h1>
+      <p class="hero__lead">O Toolbelt esconde os ícones que não cabem ao lado do notch, alterna entre janelas, guarda o que você copia, encaixa janelas pelo teclado, avisa quando memória e disco apertam e troca de conta do Claude Code. Tudo num processo de uns 15 MB.</p>
+      <p class="hero__replaces">No lugar de Ice ou Bartender, AltTab, Flycut, Rectangle, um monitor de RAM e disco e do vai e vem entre contas do Claude Code.</p>
+      <div class="hero__actions">
+        <a class="button button--primary" href="/download">Baixar para macOS</a>
+        <a class="button button--quiet" href="#recursos">Ver recursos</a>
+      </div>
+      <ul class="hero__facts">
+        <li>macOS 14 ou mais novo</li>
+        <li>Apple Silicon e Intel</li>
+        <li>Notarizado pela Apple</li>
+      </ul>
+    </div>
+
+    <div class="hero__stage">
+      <div class="mac-panel" id="hero-panel" role="img" aria-label="Painel do Toolbelt aberto abaixo do cinto: ícones escondidos da barra, contas do Claude com o uso de cada uma e memória e disco do Mac.">
+        <p class="mac-panel__label">Ícones escondidos</p>
+        <div class="mac-panel__extras">
+          <span><svg><use href="#glyph-cloud"/></svg></span>
+          <span><svg><use href="#glyph-music"/></svg></span>
+          <span><svg><use href="#glyph-shield"/></svg></span>
+          <span><svg><use href="#glyph-timer"/></svg></span>
+          <span><svg><use href="#glyph-display"/></svg></span>
+          <span><svg><use href="#glyph-keyboard"/></svg></span>
+          <span><svg><use href="#glyph-camera"/></svg></span>
+          <span><svg><use href="#glyph-bolt"/></svg></span>
+          <span><svg><use href="#glyph-bell"/></svg></span>
+          <span><svg><use href="#glyph-globe"/></svg></span>
+          <span><svg><use href="#glyph-headphones"/></svg></span>
+          <span><svg><use href="#glyph-battery"/></svg></span>
+        </div>
+        <div class="mac-panel__divider"></div>
+        <p class="mac-panel__label">Claude</p>
+        <div class="panel-account panel-account--active">
+          <span class="account-badge account-badge--one">1</span>
+          <span class="panel-account__text"><strong>pessoal</strong><span>eu@exemplo.com · 5h 22% · sem. 41%</span></span>
+          <svg class="panel-account__check"><use href="#glyph-check"/></svg>
+          <svg class="panel-account__terminal"><use href="#glyph-terminal"/></svg>
+        </div>
+        <div class="panel-account">
+          <span class="account-badge account-badge--two">2</span>
+          <span class="panel-account__text"><span class="panel-account__name">trabalho</span><span>eu@empresa.com · 5h 63% · sem. 18%</span></span>
+          <svg class="panel-account__terminal"><use href="#glyph-terminal"/></svg>
+        </div>
+        <div class="mac-panel__divider"></div>
+        <p class="mac-panel__label">Sistema</p>
+        <div class="panel-meter">
+          <div class="panel-meter__line"><span class="panel-meter__title">Memória</span><span class="panel-meter__value">11,9 GB de 16 GB · 74%</span></div>
+          <div class="panel-meter__track"><span style="--ratio: 0.74"></span></div>
+        </div>
+        <p class="panel-note">Swap 1,2 GB · pressão normal</p>
+        <div class="panel-meter">
+          <div class="panel-meter__line"><span class="panel-meter__title">Disco</span><span class="panel-meter__value">210,4 GB livres · 58%</span></div>
+          <div class="panel-meter__track"><span style="--ratio: 0.58"></span></div>
+        </div>
+        <p class="panel-report"><svg><use href="#glyph-report"/></svg>Relatório completo do Mac…</p>
+        <div class="mac-panel__divider"></div>
+        <div class="mac-panel__footer">
+          <span><svg><use href="#glyph-clipboard"/></svg></span>
+          <span><svg><use href="#glyph-arrange"/></svg></span>
+          <span><svg><use href="#glyph-split"/></svg></span>
+          <span class="mac-panel__spacer"></span>
+          <span><svg><use href="#glyph-gear"/></svg></span>
+          <span><svg><use href="#glyph-power"/></svg></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="overview" id="recursos" aria-labelledby="overview-title">
+    <div class="container">
+      <h2 class="section-title" id="overview-title">O que vem no cinto</h2>
+      <p class="section-lead">Seis módulos que você liga e desliga um a um nas Configurações. Todos os atalhos podem ser trocados.</p>
+      <ul class="overview__list">
+        <li><a href="#barra-de-menus"><strong>Barra de menus</strong><span>Ícones que não cabem vão para um painel abaixo do cinto.</span></a></li>
+        <li><a href="#alternar-janelas"><strong>Alternar janelas</strong><span>Todas as janelas abertas, com busca e ações pelo teclado.</span></a></li>
+        <li><a href="#area-de-transferencia"><strong>Área de transferência</strong><span>Textos, imagens e prints copiados, prontos para colar.</span></a></li>
+        <li><a href="#janelas"><strong>Janelas</strong><span>Metades, terços e cantos com atalhos ⌃⌥.</span></a></li>
+        <li><a href="#monitor"><strong>Monitor do sistema</strong><span>Memória, swap e disco, com aviso antes de faltar.</span></a></li>
+        <li><a href="#claude"><strong>Contas do Claude</strong><span>Troca de conta do Claude Code e uso de cada uma.</span></a></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="feature" id="barra-de-menus" aria-labelledby="menubar-title">
+    <div class="container feature__grid">
+      <div class="feature__copy">
+        <h2 class="section-title" id="menubar-title">Nenhum ícone perdido atrás do notch</h2>
+        <p>Num MacBook com notch, o que não cabe na barra simplesmente some. O Toolbelt deixa à vista só o que você quer e guarda o resto num painel logo abaixo do cinto. Clique num ícone de lá e o menu do app abre como sempre.</p>
+        <ul class="feature__points">
+          <li><span class="feature__key">Clique no cinto</span> abre o painel com os ícones escondidos, as contas do Claude e o sistema.</li>
+          <li><span class="feature__key"><kbd>⌥</kbd> clique</span> liga o modo organizar: segure <kbd>⌘</kbd> e arraste para a esquerda do traço ┊ o que deve ficar escondido.</li>
+          <li><span class="feature__key">Clique direito</span> mostra o menu rápido dos módulos.</li>
+          <li><span class="feature__key">Ao lado do cinto</span> você pode mostrar a conta ativa do Claude, o uso de 5 h, a RAM, o swap ou o disco livre, num único item.</li>
+        </ul>
+      </div>
+      <figure class="feature__art">
+        <div class="arrange-bar" role="img" aria-label="Duas barras de menus. Na primeira, o modo organizar: à esquerda do traço ficam os ícones que vão para o painel. Na segunda, a barra depois: só o cinto, o Wi-Fi e o relógio à direita do notch.">
+          <p class="arrange-bar__caption">Modo organizar</p>
+          <div class="arrange-bar__strip">
+            <span class="arrange-bar__menus"><b>Finder</b><span>Arquivo</span><span>Editar</span></span>
+            <span class="arrange-bar__notch"></span>
+            <span class="arrange-bar__hidden">
+              <svg><use href="#glyph-cloud"/></svg>
+              <svg><use href="#glyph-music"/></svg>
+              <svg><use href="#glyph-shield"/></svg>
+              <svg><use href="#glyph-timer"/></svg>
+            </span>
+            <span class="arrange-bar__divider">┊</span>
+            <span class="arrange-bar__visible">
+              <svg><use href="#belt-closed"/></svg>
+              <svg><use href="#glyph-wifi"/></svg>
+              <span>17:16</span>
+            </span>
+          </div>
+          <p class="arrange-bar__caption">Depois</p>
+          <div class="arrange-bar__strip">
+            <span class="arrange-bar__menus"><b>Finder</b><span>Arquivo</span><span>Editar</span></span>
+            <span class="arrange-bar__notch"></span>
+            <span class="arrange-bar__visible arrange-bar__visible--after">
+              <svg><use href="#belt-closed"/></svg>
+              <svg><use href="#glyph-wifi"/></svg>
+              <span>17:16</span>
+            </span>
+          </div>
+        </div>
+        <figcaption>Modo organizar: o que fica à esquerda do traço passa a morar no painel do cinto.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="feature" id="alternar-janelas" aria-labelledby="switcher-title">
+    <div class="container feature__grid">
+      <div class="feature__copy">
+        <h2 class="section-title" id="switcher-title">Alterne entre janelas, não entre apps</h2>
+        <p>Segure <kbd>⌥</kbd> e aperte <kbd>⇥</kbd>: aparecem todas as janelas abertas, de todos os apps. Solte para trocar. Um toque rápido volta direto para a janela anterior, e <kbd>⇧</kbd> anda para trás.</p>
+        <p>Prefere <kbd>⌘</kbd><kbd>⇥</kbd>, como no AltTab? Grave esse atalho e o Toolbelt assume o lugar do alternador do macOS enquanto estiver aberto.</p>
+        <ul class="feature__points">
+          <li><span class="feature__key"><kbd>⌥</kbd><kbd>`</kbd></span> mostra só as janelas do app atual.</li>
+          <li><span class="feature__key">Com o painel aberto</span> <kbd>W</kbd> fecha a janela, <kbd>M</kbd> minimiza, <kbd>H</kbd> esconde o app e <kbd>Q</kbd> fecha o app.</li>
+          <li><span class="feature__key"><kbd>/</kbd> busca</span> pelo título da janela ou nome do app; confirme com <kbd>⏎</kbd>.</li>
+          <li><span class="feature__key">Miniaturas</span> das janelas, se você quiser. Ficam só na memória, no máximo 24.</li>
+        </ul>
+      </div>
+      <figure class="feature__art">
+        <div class="screen" role="img" aria-label="Alternador de janelas aberto no meio da tela, com cinco janelas de apps diferentes e a segunda selecionada.">
+          <span class="screen__window screen__window--back"></span>
+          <span class="screen__window screen__window--front"></span>
+          <div class="switcher">
+            <div class="switcher__tiles">
+              <span class="switcher__tile"><span class="app-icon app-icon--browser"><svg><use href="#glyph-globe"/></svg></span><span class="switcher__title">Docs</span></span>
+              <span class="switcher__tile switcher__tile--selected"><span class="app-icon app-icon--terminal"><svg><use href="#glyph-terminal"/></svg></span><span class="switcher__title">~/toolbelt</span></span>
+              <span class="switcher__tile"><span class="app-icon app-icon--notes"><svg><use href="#glyph-report"/></svg></span><span class="switcher__title">Ideias</span></span>
+              <span class="switcher__tile"><span class="app-icon app-icon--chat"><svg><use href="#glyph-bell"/></svg></span><span class="switcher__title">Família</span></span>
+              <span class="switcher__tile"><span class="app-icon app-icon--code"><svg><use href="#glyph-split"/></svg></span><span class="switcher__title">main.swift</span></span>
+            </div>
+            <p class="switcher__hints">W fechar · M minimizar · H esconder app · Q fechar app · / buscar</p>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="feature" id="area-de-transferencia" aria-labelledby="clipboard-title">
+    <div class="container feature__grid">
+      <div class="feature__copy">
+        <h2 class="section-title" id="clipboard-title">Tudo o que você copiou, a um atalho de distância</h2>
+        <p><kbd>⌥</kbd><kbd>⌘</kbd><kbd>V</kbd> abre um painel com os últimos textos, imagens e prints. Escolha com o mouse, com as setas ou pelos números de 1 a 0, e o item é colado no app em que você estava.</p>
+        <ul class="feature__points">
+          <li><span class="feature__key">Prints</span> salvos com <kbd>⌘</kbd><kbd>⇧</kbd><kbd>3</kbd>, <kbd>4</kbd> ou <kbd>5</kbd> entram sozinhos no histórico.</li>
+          <li><span class="feature__key">Senhas ficam de fora</span>: o que vem do 1Password, do Bitwarden e dos apps que você ignorar nunca é guardado.</li>
+          <li><span class="feature__key">Arquivo diário</span>, se você ligar: um .md por dia com hora e app de origem, e as imagens numa subpasta.</li>
+          <li><span class="feature__key">Do seu jeito</span>: tema, vidro, fosco ou sólido, largura, fonte, cantos e onde o painel abre.</li>
+        </ul>
+      </div>
+      <figure class="feature__art">
+        <div class="clip-panel" role="img" aria-label="Painel da área de transferência com cinco itens numerados: um comando, um print, um recado, um link e um trecho de texto.">
+          <div class="clip-panel__row clip-panel__row--selected"><span class="clip-panel__number">1</span><span class="clip-panel__text clip-panel__text--code">git push origin main</span></div>
+          <div class="clip-panel__row clip-panel__row--image"><span class="clip-panel__number">2</span><span class="clip-panel__shot"><span class="clip-panel__shot-window"><span class="clip-panel__shot-dots"></span><span class="clip-panel__shot-line"></span><span class="clip-panel__shot-line clip-panel__shot-line--short"></span><span class="clip-panel__shot-mark"></span></span></span><span class="clip-panel__meta">Print · 17:02</span></div>
+          <div class="clip-panel__row"><span class="clip-panel__number">3</span><span class="clip-panel__text">Reunião remarcada para quinta às 15h</span></div>
+          <div class="clip-panel__row"><span class="clip-panel__number">4</span><span class="clip-panel__text">https://toolbelt.oconde.dev</span></div>
+          <div class="clip-panel__row"><span class="clip-panel__number">5</span><span class="clip-panel__text">Rua das Laranjeiras, 120, ap. 34</span></div>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="feature feature--wide" id="janelas" aria-labelledby="windows-title">
+    <div class="container">
+      <div class="feature__copy feature__copy--wide">
+        <h2 class="section-title" id="windows-title">Janelas no lugar, sem tirar a mão do teclado</h2>
+        <p>Os mesmos atalhos <kbd>⌃</kbd><kbd>⌥</kbd> do Rectangle, sem instalar o Rectangle. Metades, terços, dois terços, cantos, centro, tela cheia e troca de monitor, com o espaço entre janelas que você escolher.</p>
+      </div>
+      <ul class="layouts" aria-label="Atalhos de janela">
+        <li><span class="mini-screen"><span style="--x:.0;--y:0;--w:.5;--h:1"></span></span><span class="layouts__keys"><kbd>⌃⌥←</kbd></span><span class="layouts__name">Metade esquerda</span></li>
+        <li><span class="mini-screen"><span style="--x:.5;--y:0;--w:.5;--h:1"></span></span><span class="layouts__keys"><kbd>⌃⌥→</kbd></span><span class="layouts__name">Metade direita</span></li>
+        <li><span class="mini-screen"><span style="--x:0;--y:0;--w:1;--h:.5"></span></span><span class="layouts__keys"><kbd>⌃⌥↑</kbd></span><span class="layouts__name">Metade de cima</span></li>
+        <li><span class="mini-screen"><span style="--x:0;--y:.5;--w:1;--h:.5"></span></span><span class="layouts__keys"><kbd>⌃⌥↓</kbd></span><span class="layouts__name">Metade de baixo</span></li>
+        <li><span class="mini-screen"><span style="--x:0;--y:0;--w:.5;--h:.5"></span></span><span class="layouts__keys"><kbd>⌃⌥U</kbd></span><span class="layouts__name">Canto superior esquerdo</span></li>
+        <li><span class="mini-screen"><span style="--x:.5;--y:0;--w:.5;--h:.5"></span></span><span class="layouts__keys"><kbd>⌃⌥I</kbd></span><span class="layouts__name">Canto superior direito</span></li>
+        <li><span class="mini-screen"><span style="--x:0;--y:.5;--w:.5;--h:.5"></span></span><span class="layouts__keys"><kbd>⌃⌥J</kbd></span><span class="layouts__name">Canto inferior esquerdo</span></li>
+        <li><span class="mini-screen"><span style="--x:.5;--y:.5;--w:.5;--h:.5"></span></span><span class="layouts__keys"><kbd>⌃⌥K</kbd></span><span class="layouts__name">Canto inferior direito</span></li>
+        <li><span class="mini-screen"><span style="--x:0;--y:0;--w:.3333;--h:1"></span></span><span class="layouts__keys"><kbd>⌃⌥D</kbd></span><span class="layouts__name">Primeiro terço</span></li>
+        <li><span class="mini-screen"><span style="--x:.3333;--y:0;--w:.3334;--h:1"></span></span><span class="layouts__keys"><kbd>⌃⌥F</kbd></span><span class="layouts__name">Terço do meio</span></li>
+        <li><span class="mini-screen"><span style="--x:.6667;--y:0;--w:.3333;--h:1"></span></span><span class="layouts__keys"><kbd>⌃⌥G</kbd></span><span class="layouts__name">Último terço</span></li>
+        <li><span class="mini-screen"><span style="--x:0;--y:0;--w:.6667;--h:1"></span></span><span class="layouts__keys"><kbd>⌃⌥E</kbd></span><span class="layouts__name">Dois terços à esquerda</span></li>
+        <li><span class="mini-screen"><span style="--x:.3333;--y:0;--w:.6667;--h:1"></span></span><span class="layouts__keys"><kbd>⌃⌥T</kbd></span><span class="layouts__name">Dois terços à direita</span></li>
+        <li><span class="mini-screen"><span style="--x:0;--y:0;--w:1;--h:1"></span></span><span class="layouts__keys"><kbd>⌃⌥↩</kbd></span><span class="layouts__name">Maximizar</span></li>
+        <li><span class="mini-screen"><span style="--x:.2;--y:.15;--w:.6;--h:.7"></span></span><span class="layouts__keys"><kbd>⌃⌥C</kbd></span><span class="layouts__name">Centralizar</span></li>
+        <li><span class="mini-screen mini-screen--pair"><span></span></span><span class="layouts__keys"><kbd>⌃⌥⌘←</kbd> <kbd>⌃⌥⌘→</kbd></span><span class="layouts__name">Outro monitor</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="feature" id="monitor" aria-labelledby="monitor-title">
+    <div class="container feature__grid">
+      <div class="feature__copy">
+        <h2 class="section-title" id="monitor-title">Memória e disco à vista, com aviso antes de faltar</h2>
+        <p>RAM em uso, swap e espaço livre no disco aparecem na barra ou no painel do cinto. Quando o disco passa do limite, o swap cresce demais ou a pressão de memória sobe, chega uma notificação, e o ícone fica laranja ou vermelho até a situação normalizar.</p>
+        <ul class="feature__points">
+          <li><span class="feature__key">Um aviso por vez</span>: cada alerta aparece uma vez e só volta depois que tudo normalizar.</li>
+          <li><span class="feature__key">Limites seus</span>: por padrão, disco abaixo de 10% livre e swap acima de 4 GB.</li>
+          <li><span class="feature__key">Relatório do Mac</span> com bateria, armazenamento, memória, CPU, processos, segurança e rede. Só roda quando você abre.</li>
+        </ul>
+      </div>
+      <figure class="feature__art">
+        <div class="alert-scene" role="img" aria-label="Barra de menus com o monitor em laranja mostrando 74% de memória e 14,8 GB livres, e uma notificação do Toolbelt avisando que o disco está quase cheio.">
+          <div class="alert-scene__bar">
+            <span class="alert-scene__monitor"><svg><use href="#glyph-chip"/></svg>74% · 14,8 GB</span>
+            <svg class="alert-scene__glyph"><use href="#belt-closed"/></svg>
+            <svg class="alert-scene__glyph"><use href="#glyph-wifi"/></svg>
+            <span>17:16</span>
+          </div>
+          <div class="notification">
+            <span class="notification__icon"><svg><use href="#belt-closed"/></svg></span>
+            <span class="notification__text"><strong>Toolbelt</strong><span>Disco quase cheio: 14,8 GB livres (7%).</span></span>
+            <span class="notification__time">agora</span>
+          </div>
+          <div class="mac-panel mac-panel--compact">
+            <p class="mac-panel__label">Sistema</p>
+            <div class="panel-meter">
+              <div class="panel-meter__line"><span class="panel-meter__title">Memória</span><span class="panel-meter__value">11,8 GB de 16 GB · 74%</span></div>
+              <div class="panel-meter__track"><span style="--ratio: 0.74"></span></div>
+            </div>
+            <p class="panel-note">Swap 3,1 GB · pressão normal</p>
+            <div class="panel-meter">
+              <div class="panel-meter__line"><span class="panel-meter__title">Disco</span><span class="panel-meter__value">14,8 GB livres · 93%</span></div>
+              <div class="panel-meter__track panel-meter__track--warning"><span style="--ratio: 0.93"></span></div>
+            </div>
+            <p class="panel-report"><svg><use href="#glyph-report"/></svg>Relatório completo do Mac…</p>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="feature" id="claude" aria-labelledby="claude-title">
+    <div class="container feature__grid">
+      <div class="feature__copy">
+        <h2 class="section-title" id="claude-title">Várias contas do Claude Code, troca num clique</h2>
+        <p>Cada conta mantém o próprio login, e conversas, memória, skills e configurações continuam compartilhadas. O Toolbelt mostra qual conta está ativa, quanto da janela de 5 horas cada uma já usou e quando ela zera.</p>
+        <ul class="feature__points">
+          <li><span class="feature__key">Selo colorido</span> por conta, na cor que você escolher, na barra e no painel.</li>
+          <li><span class="feature__key">Terminal preso a uma conta</span>, com um atalho para cada uma.</li>
+          <li><span class="feature__key">Sem login extra</span>: o uso é lido dos arquivos do próprio Claude Code e atualiza quando eles mudam.</li>
+        </ul>
+      </div>
+      <figure class="feature__art">
+        <div class="claude-scene" role="img" aria-label="Menu das contas do Claude aberto na barra: conta pessoal ativa com 22% de uso nas últimas 5 horas e conta de trabalho com 63%.">
+          <div class="claude-scene__bar">
+            <span class="claude-scene__item"><span class="account-badge account-badge--one account-badge--small">1</span>pessoal · 22%</span>
+          </div>
+          <div class="mac-menu">
+            <p class="mac-menu__row mac-menu__row--muted"><span class="account-badge account-badge--one account-badge--small">1</span>Ativa agora: pessoal</p>
+            <div class="mac-menu__separator"></div>
+            <p class="mac-menu__header">Trocar para</p>
+            <p class="mac-menu__row"><svg class="mac-menu__check"><use href="#glyph-check"/></svg><span class="account-badge account-badge--one account-badge--small">1</span>pessoal · eu@exemplo.com</p>
+            <p class="mac-menu__row mac-menu__row--sub">5h 22% (zera 19:40) · semana 41%</p>
+            <p class="mac-menu__row mac-menu__row--highlight"><span class="mac-menu__check"></span><span class="account-badge account-badge--two account-badge--small">2</span>trabalho · eu@empresa.com</p>
+            <p class="mac-menu__row mac-menu__row--sub">5h 63% (zera 18:05) · semana 18%</p>
+            <div class="mac-menu__separator"></div>
+            <p class="mac-menu__row">Abrir terminal com<svg class="mac-menu__chevron"><use href="#glyph-chevron"/></svg></p>
+            <p class="mac-menu__row">Gerenciar contas…</p>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="light" aria-labelledby="light-title">
+    <div class="container light__grid">
+      <div class="light__copy">
+        <h2 class="section-title" id="light-title">Leve, e tudo fica no seu Mac</h2>
+        <p>Um processo no lugar de seis. O Toolbelt reage aos eventos do sistema, como troca de app, arquivo alterado ou horário do próximo reset, em vez de ficar varrendo o Mac, e fica em 0% de CPU quando você não está usando.</p>
+        <p>Não tem conta, não tem telemetria. O que você copia, o uso do Claude e os números do sistema não saem do computador. A única coisa que ele busca na internet é se existe versão nova.</p>
+      </div>
+      <div class="activity" role="img" aria-label="Monitor de Atividade com o processo Toolbelt usando 13,2 MB de memória e 0,0% de CPU.">
+        <div class="activity__head"><span>Processo</span><span>Memória</span><span>% CPU</span></div>
+        <div class="activity__row"><span class="activity__name"><svg><use href="#belt-closed"/></svg>Toolbelt</span><span>13,2 MB</span><span>0,0</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="updates" aria-labelledby="updates-title">
+    <div class="container feature__grid">
+      <div class="feature__copy">
+        <h2 class="section-title" id="updates-title">Atualiza sozinho, quando você mandar</h2>
+        <p>O Toolbelt confere se saiu versão nova. Quando sai, avisa no próprio painel do cinto e numa notificação do sistema. Um clique em Atualizar baixa, troca o app e abre de novo, sem passar pelo navegador.</p>
+      </div>
+      <figure class="feature__art">
+        <div class="update-scene" role="img" aria-label="Seção Atualização no painel do Toolbelt, com o botão Atualizar, e a notificação do sistema com o botão Atualizar agora.">
+          <div class="mac-panel mac-panel--compact update-scene__panel">
+            <p class="mac-panel__label">Ícones escondidos</p>
+            <div class="mac-panel__extras">
+              <span><svg><use href="#glyph-cloud"/></svg></span>
+              <span><svg><use href="#glyph-music"/></svg></span>
+              <span><svg><use href="#glyph-shield"/></svg></span>
+              <span><svg><use href="#glyph-timer"/></svg></span>
+              <span><svg><use href="#glyph-display"/></svg></span>
+              <span><svg><use href="#glyph-keyboard"/></svg></span>
+            </div>
+            <div class="mac-panel__divider"></div>
+            <p class="mac-panel__label">Atualização</p>
+            <div class="update-banner">
+              <svg class="update-banner__icon"><use href="#glyph-download"/></svg>
+              <span class="update-banner__text"><strong>Toolbelt 0.3.0 disponível</strong><span>Você está na 0.2.0.</span></span>
+              <span class="update-banner__action">Atualizar</span>
+            </div>
+          </div>
+          <div class="notification notification--update">
+            <span class="notification__icon"><svg><use href="#belt-closed"/></svg></span>
+            <span class="notification__text"><strong>Toolbelt 0.3.0 disponível</strong><span>Você está na 0.2.0. Atualize com um clique.</span></span>
+            <span class="notification__action">Atualizar agora</span>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="permissions" aria-labelledby="permissions-title">
+    <div class="container">
+      <h2 class="section-title" id="permissions-title">Permissões que ele pede, e por quê</h2>
+      <dl class="permissions__list">
+        <div>
+          <dt>Acessibilidade <span class="permissions__tag">obrigatória</span></dt>
+          <dd>Para colar o item escolhido, mover e trocar janelas e abrir os ícones escondidos da barra.</dd>
+        </div>
+        <div>
+          <dt>Notificações</dt>
+          <dd>Para os avisos de memória e disco e para dizer que há uma versão nova.</dd>
+        </div>
+        <div>
+          <dt>Pasta dos prints</dt>
+          <dd>Para colocar no histórico os prints que o macOS salva, normalmente na Mesa.</dd>
+        </div>
+        <div>
+          <dt>Gravação de Tela <span class="permissions__tag">opcional</span></dt>
+          <dd>Só para as miniaturas do alternador, que vêm desligadas. As prévias ficam na memória e nunca vão para o disco.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="install" id="instalacao" aria-labelledby="install-title">
+    <div class="container">
+      <h2 class="section-title" id="install-title">Instalação</h2>
+      <ol class="install__steps">
+        <li>
+          <h3>Baixe o Toolbelt</h3>
+          <p>O <a href="/download">arquivo .dmg</a> traz o app assinado e notarizado pela Apple, então ele abre sem aviso de desenvolvedor desconhecido.</p>
+        </li>
+        <li>
+          <h3>Arraste para Aplicativos</h3>
+          <p>Abra o .dmg e arraste o Toolbelt para a pasta Aplicativos.</p>
+        </li>
+        <li>
+          <h3>Abra e permita a Acessibilidade</h3>
+          <p>Na primeira vez, ligue o Toolbelt em Ajustes do Sistema › Privacidade e Segurança › Acessibilidade. O cinto aparece na barra de menus.</p>
+        </li>
+      </ol>
+      <div class="install__footer">
+        <a class="button button--primary" href="/download">Baixar para macOS</a>
+        <p class="install__requirements">Requer macOS 14 Sonoma ou mais novo, num Mac com Apple Silicon ou Intel. As contas do Claude precisam do Claude Code instalado.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq" id="perguntas" aria-labelledby="faq-title">
+    <div class="container faq__container">
+      <h2 class="section-title" id="faq-title">Perguntas</h2>
+      <div class="faq__list">
+        <details>
+          <summary>O Toolbelt é seguro?</summary>
+          <p>Ele é assinado com Developer ID e notarizado pela Apple: o macOS confere a assinatura antes de abrir e não mostra o aviso de app que não pôde ser verificado. Roda só no seu Mac, sem conta e sem telemetria.</p>
+        </details>
+        <details>
+          <summary>Preciso desinstalar o AltTab, o Ice ou o Rectangle?</summary>
+          <p>Não precisa desinstalar, mas feche esses apps e tire do início automático. Eles usam os mesmos atalhos e disputam a barra de menus com o Toolbelt. Vale também para Bartender e Flycut.</p>
+        </details>
+        <details>
+          <summary>O Toolbelt usa a internet?</summary>
+          <p>Só para ver se existe versão nova e baixá-la quando você pede. Histórico da área de transferência, uso do Claude e números do sistema ficam no Mac.</p>
+        </details>
+        <details>
+          <summary>Dá para usar só alguns módulos?</summary>
+          <p>Dá. Cada módulo liga e desliga nas Configurações, e cada atalho pode ser trocado ou desativado.</p>
+        </details>
+        <details>
+          <summary>Como desinstalo?</summary>
+          <p>Nas Configurações, desligue “Abrir o Toolbelt ao iniciar o Mac”. Depois saia pelo painel do cinto, em Sair do Toolbelt, e arraste o app de Aplicativos para o Lixo. Para apagar também as configurações e o histórico, remova <code>~/Library/Preferences/dev.oconde.toolbelt.plist</code> e a pasta <code>~/Library/Application Support/Toolbelt</code>.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <p class="site-footer__brand"><svg aria-hidden="true"><use href="#belt-closed"/></svg>Toolbelt <span class="site-footer__version">v0.2.0</span></p>
+    <nav class="site-footer__links" aria-label="Rodapé">
+      <a href="/download">Baixar</a>
+      <a href="/changelog">Novidades da versão</a>
+      <a href="#topo">Voltar ao topo</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

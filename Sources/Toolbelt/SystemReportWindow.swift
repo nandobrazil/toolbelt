@@ -30,7 +30,7 @@ final class SystemReportModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var includesDisk = false
 
-    private let command = NSString(string: "~/.local/bin/macscan").expandingTildeInPath
+    private let command = CommandLineTool.path("macscan")
 
     func load(includingDisk: Bool = false) {
         guard !isLoading else { return }

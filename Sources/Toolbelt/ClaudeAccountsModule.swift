@@ -87,7 +87,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
 
     private static let maximumTitleLength = 12
 
-    private let accountsCommand = NSString(string: "~/.local/bin/cca").expandingTildeInPath
+    private let accountsCommand = CommandLineTool.path("cca")
     private var statusItem: NSStatusItem?
     private let menu = NSMenu()
     private var report: StatusReport?
@@ -125,7 +125,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     }
 
     func openTerminal(for account: String) {
-        Terminal.run("eval \"$(cca pin \(account))\" && cd ~ && clear && claude")
+        Terminal.run("eval \"$(\(CommandLineTool.shellCommand("cca")) pin \(account))\" && cd ~ && clear && claude")
     }
 
     private func registerTerminalShortcuts() {
@@ -218,7 +218,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     }
 
     func login(_ account: String) {
-        Terminal.run("cca login \(account)")
+        Terminal.run("\(CommandLineTool.shellCommand("cca")) login \(account)")
     }
 
     func rename(_ account: String, alias: String) {
@@ -289,7 +289,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     private func rebuildMenu() {
         menu.removeAllItems()
         guard let report else {
-            menu.addItem(disabledMenuItem("Não consegui ler o cca (~/.local/bin/cca)"))
+            menu.addItem(disabledMenuItem("Não consegui rodar o cca"))
             return
         }
 
@@ -336,7 +336,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
                 let name = account.account
                 resumeMenu.addItem(ActionMenuItem(title: account.label) { [weak self] in
                     self?.use(name)
-                    Terminal.run("cca resume \(name)")
+                    Terminal.run("\(CommandLineTool.shellCommand("cca")) resume \(name)")
                 })
             }
             resumeItem.submenu = resumeMenu

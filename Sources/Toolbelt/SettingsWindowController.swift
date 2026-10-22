@@ -3,7 +3,13 @@ import SwiftUI
 
 final class SettingsWindowController: NSObject, NSWindowDelegate {
     let bridge = SettingsBridge()
+    private let updater: AppUpdater
     private var window: NSWindow?
+
+    init(updater: AppUpdater) {
+        self.updater = updater
+        super.init()
+    }
 
     func show(section: SettingsSection? = nil) {
         if let section {
@@ -17,7 +23,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     private func makeWindow() -> NSWindow {
-        let hostingController = NSHostingController(rootView: SettingsView(settings: AppSettings.shared, bridge: bridge))
+        let hostingController = NSHostingController(rootView: SettingsView(settings: AppSettings.shared, bridge: bridge, updater: updater))
         let window = NSWindow(contentViewController: hostingController)
         window.title = "Configurações do Toolbelt"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]

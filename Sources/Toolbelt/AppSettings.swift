@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import ServiceManagement
 
 enum ChevronStyle: String, Codable, CaseIterable, Identifiable {
     case belt
@@ -364,6 +365,20 @@ struct AppSwitcherSettings: Codable, Equatable {
     }
 }
 
+struct UpdateSettings: Codable, Equatable {
+    var checksAutomatically = true
+    var notifiesWithSystemNotification = true
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = UpdateSettings()
+        checksAutomatically = (try? container.decodeIfPresent(Bool.self, forKey: .checksAutomatically)) ?? defaults.checksAutomatically
+        notifiesWithSystemNotification = (try? container.decodeIfPresent(Bool.self, forKey: .notifiesWithSystemNotification)) ?? defaults.notifiesWithSystemNotification
+    }
+}
+
 struct SettingsValues: Codable, Equatable {
     var enabledModules: [String: Bool] = [:]
     var menuBar = MenuBarSettings()
@@ -372,6 +387,7 @@ struct SettingsValues: Codable, Equatable {
     var claude = ClaudeSettings()
     var systemMonitor = SystemMonitorSettings()
     var appSwitcher = AppSwitcherSettings()
+    var updates = UpdateSettings()
 
     init() {}
 
@@ -384,6 +400,7 @@ struct SettingsValues: Codable, Equatable {
         claude = (try? container.decodeIfPresent(ClaudeSettings.self, forKey: .claude)) ?? ClaudeSettings()
         systemMonitor = (try? container.decodeIfPresent(SystemMonitorSettings.self, forKey: .systemMonitor)) ?? SystemMonitorSettings()
         appSwitcher = (try? container.decodeIfPresent(AppSwitcherSettings.self, forKey: .appSwitcher)) ?? AppSwitcherSettings()
+        updates = (try? container.decodeIfPresent(UpdateSettings.self, forKey: .updates)) ?? UpdateSettings()
     }
 }
 
@@ -429,37 +446,38 @@ final class AppSettings: ObservableObject {
 }
 
 enum LaunchAtLogin {
-    static let label = "dev.oconde.toolbelt"
+    private static let legacyLabel = "dev.oconde.toolbelt"
+    private static let configuredKey = "launchAtLogin.configured"
 
-    private static var agentURL: URL {
+    private static var legacyAgentURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/LaunchAgents/\(label).plist")
+            .appendingPathComponent("Library/LaunchAgents/\(legacyLabel).plist")
     }
 
     static var isEnabled: Bool {
-        FileManager.default.fileExists(atPath: agentURL.path)
+        SMAppService.mainApp.status == .enabled
     }
 
     static func setEnabled(_ enabled: Bool) {
-        if !enabled {
-            try? FileManager.default.removeItem(at: agentURL)
-            return
-        }
-        guard let executable = Bundle.main.executablePath else { return }
-        let logPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Toolbelt.log").path
-        let plist: [String: Any] = [
-            "Label": label,
-            "ProgramArguments": [executable],
-            "StandardErrorPath": logPath,
-            "RunAtLoad": true,
-            "KeepAlive": false
-        ]
         do {
-            try FileManager.default.createDirectory(at: agentURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
-            try data.write(to: agentURL, options: .atomic)
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
         } catch {
-            NSLog("Toolbelt: failed to write launch agent: \(error)")
+            NSLog("Toolbelt: launch at login enabled=\(enabled) failed: \(error.localizedDescription)")
         }
+    }
+
+    static func configureOnFirstLaunch() {
+        let defaults = UserDefaults.standard
+        let hadLegacyAgent = FileManager.default.fileExists(atPath: legacyAgentURL.path)
+        if hadLegacyAgent {
+            try? FileManager.default.removeItem(at: legacyAgentURL)
+        }
+        guard hadLegacyAgent || !defaults.bool(forKey: configuredKey) else { return }
+        defaults.set(true, forKey: configuredKey)
+        setEnabled(true)
     }
 }

@@ -96,6 +96,7 @@ final class SettingsBridge: ObservableObject {
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var bridge: SettingsBridge
+    @ObservedObject var updater: AppUpdater
 
     var body: some View {
         NavigationSplitView {
@@ -118,7 +119,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var detail: some View {
         switch bridge.selection {
-        case .general: GeneralSettingsPage(settings: settings, bridge: bridge)
+        case .general: GeneralSettingsPage(settings: settings, bridge: bridge, updater: updater)
         case .menuBar: MenuBarSettingsPage(settings: settings, bridge: bridge)
         case .switcher: AppSwitcherSettingsPage(settings: settings)
         case .clipboard: ClipboardSettingsPage(settings: settings, bridge: bridge)
@@ -158,6 +159,7 @@ private struct ModuleToggleSection: View {
 private struct GeneralSettingsPage: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var bridge: SettingsBridge
+    @ObservedObject var updater: AppUpdater
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
 
     var body: some View {
@@ -169,6 +171,8 @@ private struct GeneralSettingsPage: View {
                         LaunchAtLogin.setEnabled(enabled)
                     }
             }
+
+            UpdateSettingsSection(settings: settings, updater: updater)
 
             Section("Módulos") {
                 ForEach(bridge.modules) { module in
@@ -896,6 +900,85 @@ private struct ClaudeAccountRow: View {
         let trimmed = alias.trimmingCharacters(in: .whitespaces)
         guard trimmed != account.alias else { return }
         onRename(trimmed)
+    }
+}
+
+private struct UpdateSettingsSection: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var updater: AppUpdater
+
+    var body: some View {
+        Section {
+            LabeledContent("Versão instalada", value: "\(AppUpdater.currentVersion) (\(AppUpdater.currentBuild))")
+            status
+            HStack {
+                Button("Verificar agora") {
+                    updater.check(userInitiated: true)
+                }
+                .disabled(updater.isBusy)
+                if let lastCheck = updater.lastCheck {
+                    Text("Última verificação \(lastCheck.formatted(.relative(presentation: .named)))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Toggle("Verificar automaticamente (uma vez por dia)", isOn: $settings.values.updates.checksAutomatically)
+                .toggleStyle(.switch)
+            Toggle("Avisar com notificação do sistema", isOn: $settings.values.updates.notifiesWithSystemNotification)
+                .toggleStyle(.switch)
+                .disabled(!settings.values.updates.checksAutomatically)
+        } header: {
+            Text("Atualizações")
+        } footer: {
+            Text(updater.canInstallInPlace
+                ? "A atualização é baixada de toolbelt.oconde.dev, conferida (SHA-256 e assinatura do mesmo desenvolvedor) e instalada no lugar; o Toolbelt reabre sozinho."
+                : "Esta cópia foi compilada localmente, sem assinatura Developer ID: o botão de atualizar abre a página de download.")
+        }
+    }
+
+    @ViewBuilder
+    private var status: some View {
+        switch updater.state {
+        case .idle:
+            Label("Ainda não verificado nesta sessão", systemImage: "clock")
+                .foregroundStyle(.secondary)
+        case .checking:
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Verificando…")
+            }
+        case .upToDate:
+            Label("Você está na versão mais recente", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        case .available(let release):
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Versão \(release.version) disponível", systemImage: "arrow.down.circle.fill")
+                    .font(.headline)
+                    .foregroundStyle(Color.accentColor)
+                ForEach(release.notes, id: \.self) { note in
+                    Text("• \(note)")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                Button("Atualizar agora") {
+                    updater.installAvailableUpdate()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        case .downloading(let release):
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Baixando a versão \(release.version)…")
+            }
+        case .installing:
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Instalando e reabrindo…")
+            }
+        case .failed(let message):
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+        }
     }
 }
 

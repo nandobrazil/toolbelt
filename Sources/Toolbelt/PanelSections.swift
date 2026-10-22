@@ -56,6 +56,64 @@ enum PanelSections {
         return stack
     }
 
+    static func update(state: UpdateState, onInstall: @escaping () -> Void) -> NSView? {
+        let release: UpdateRelease
+        let status: String
+        let isActionable: Bool
+        switch state {
+        case .available(let available):
+            release = available
+            status = available.notes.first ?? "Você está na \(AppUpdater.currentVersion)."
+            isActionable = true
+        case .downloading(let downloading):
+            release = downloading
+            status = "Baixando…"
+            isActionable = false
+        case .installing(let installing):
+            release = installing
+            status = "Instalando e reabrindo…"
+            isActionable = false
+        default:
+            return nil
+        }
+        let stack = verticalStack()
+        stack.addArrangedSubview(header("Atualização"))
+        let row = HoverRow { if isActionable { onInstall() } }
+        row.toolTip = isActionable ? "Baixar, instalar e reabrir o Toolbelt" : nil
+
+        let icon = NSImageView(image: NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: nil) ?? NSImage())
+        icon.contentTintColor = .controlAccentColor
+        icon.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+
+        let title = NSTextField(labelWithString: "Toolbelt \(release.version) disponível")
+        title.font = .systemFont(ofSize: 13, weight: .semibold)
+        let subtitle = NSTextField(labelWithString: status)
+        subtitle.font = .systemFont(ofSize: 11)
+        subtitle.textColor = .secondaryLabelColor
+        subtitle.lineBreakMode = .byTruncatingTail
+        let texts = verticalStack(spacing: 1)
+        texts.addArrangedSubview(title)
+        texts.addArrangedSubview(subtitle)
+
+        let content = NSStackView(views: [icon, texts, NSView()])
+        content.orientation = .horizontal
+        content.spacing = 8
+        if isActionable {
+            content.addArrangedSubview(TextActionButton(title: "Atualizar", handler: onInstall))
+        } else {
+            let spinner = NSProgressIndicator()
+            spinner.style = .spinning
+            spinner.controlSize = .small
+            spinner.startAnimation(nil)
+            content.addArrangedSubview(spinner)
+        }
+        row.setContent(content)
+        stack.addArrangedSubview(row)
+        row.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        stack.widthAnchor.constraint(greaterThanOrEqualToConstant: width).isActive = true
+        return stack
+    }
+
     static func system(snapshot: SystemSnapshot, onOpenReport: @escaping () -> Void) -> NSView {
         let stack = verticalStack()
         stack.addArrangedSubview(header("Sistema"))
@@ -199,6 +257,29 @@ final class HoverRow: NSView {
         if bounds.contains(convert(event.locationInWindow, from: nil)) {
             handler()
         }
+    }
+}
+
+final class TextActionButton: NSButton {
+    private let handler: () -> Void
+
+    init(title: String, handler: @escaping () -> Void) {
+        self.handler = handler
+        super.init(frame: .zero)
+        self.title = title
+        bezelStyle = .push
+        controlSize = .small
+        bezelColor = .controlAccentColor
+        target = self
+        action = #selector(runHandler)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
+    }
+
+    @objc private func runHandler() {
+        handler()
     }
 }
 

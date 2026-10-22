@@ -9,11 +9,12 @@ final class AppController: NSObject {
     private let systemMonitor = SystemMonitorModule()
     private let appSwitcher = AppSwitcherModule()
     private let systemReport = SystemReportWindowController()
+    private let updater = AppUpdater()
     private lazy var modules: [ToolbeltModule] = [menuBarOverflow, appSwitcher, clipboard, windowLayout, systemMonitor, claudeAccounts]
 
     private let settings = AppSettings.shared
     private let panel = ToolbeltPanel()
-    private let settingsWindow = SettingsWindowController()
+    private lazy var settingsWindow = SettingsWindowController(updater: updater)
     private var chevronItem: NSStatusItem?
     private var runningModuleIdentifiers: Set<String> = []
     private var settingsSubscription: AnyCancellable?
@@ -27,6 +28,7 @@ final class AppController: NSObject {
     func start() {
         NSLog("Toolbelt: started, accessibility trusted=\(AccessibilityPermission.isTrusted)")
         NativeWindowSwitching.restoreOnExit()
+        LaunchAtLogin.configureOnFirstLaunch()
         MainMenuBuilder.install { [weak self] in self?.openSettings() }
         restoreMissingItemPositions()
         configureSettingsBridge()
@@ -42,6 +44,9 @@ final class AppController: NSObject {
             AccessibilityPermission.requestIfNeeded()
         }
         updateChevronIcon()
+        updater.onChange = { [weak self] in self?.updateChevronIcon() }
+        updater.onOpenSettings = { [weak self] in self?.openSettings(section: .general) }
+        updater.start()
 
         settingsSubscription = settings.$values
             .dropFirst()
@@ -120,6 +125,7 @@ final class AppController: NSObject {
                 module.settingsDidChange()
             }
         }
+        updater.settingsDidChange()
         updateChevronIcon()
     }
 
@@ -153,7 +159,12 @@ final class AppController: NSObject {
         } else {
             button.image = settings.values.menuBar.iconStyle.image(isOpen: panel.isVisible)
         }
-        button.attributedTitle = inlineTitle()
+        let title = NSMutableAttributedString(attributedString: inlineTitle())
+        if updater.availableRelease != nil {
+            let font = NSFont.systemFont(ofSize: NSFont.systemFontSize - 3)
+            title.append(NSAttributedString(string: " ●", attributes: [.font: font, .foregroundColor: NSColor.controlAccentColor]))
+        }
+        button.attributedTitle = title
     }
 
     private func inlineTitle() -> NSAttributedString {
@@ -191,6 +202,12 @@ final class AppController: NSObject {
 
     private func panelSections() -> [NSView] {
         var sections: [NSView] = []
+        if let updateSection = PanelSections.update(state: updater.state, onInstall: { [weak self] in
+            self?.panel.close()
+            self?.updater.installAvailableUpdate()
+        }) {
+            sections.append(updateSection)
+        }
         if settings.values.menuBar.panelShowsClaude && isRunning(claudeAccounts) && !claudeAccounts.accounts.isEmpty {
             sections.append(PanelSections.claude(
                 accounts: claudeAccounts.accounts,
@@ -294,6 +311,16 @@ final class AppController: NSObject {
             module.menuItems().forEach(menu.addItem)
         }
         menu.addItem(.separator())
+        if let release = updater.availableRelease {
+            menu.addItem(ActionMenuItem(title: "Atualizar para a versão \(release.version)") { [weak self] in
+                self?.updater.installAvailableUpdate()
+            })
+        } else {
+            menu.addItem(ActionMenuItem(title: "Verificar atualizações…") { [weak self] in
+                self?.updater.check(userInitiated: true)
+                self?.openSettings(section: .general)
+            })
+        }
         menu.addItem(ActionMenuItem(title: "Configurações…", keyEquivalent: ",") { [weak self] in
             self?.openSettings()
         })

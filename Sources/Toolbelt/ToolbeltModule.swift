@@ -27,6 +27,20 @@ enum AppPaths {
     }()
 }
 
+enum CommandLineTool {
+    static func path(_ name: String) -> String {
+        let installed = NSString(string: "~/.local/bin/\(name)").expandingTildeInPath
+        if FileManager.default.isExecutableFile(atPath: installed) {
+            return installed
+        }
+        return Bundle.main.resourceURL?.appendingPathComponent("bin/\(name)").path ?? installed
+    }
+
+    static func shellCommand(_ name: String) -> String {
+        "'" + path(name).replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+}
+
 enum AccessibilityPermission {
     static var isTrusted: Bool { AXIsProcessTrusted() }
 

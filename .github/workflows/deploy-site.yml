@@ -1,0 +1,59 @@
+name: Deploy da landing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - infra/**
+      - Dockerfile
+      - .dockerignore
+      - .github/workflows/deploy-site.yml
+  workflow_dispatch:
+
+concurrency:
+  group: toolbelt-site
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    name: Varredura de segredos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar xz gitleaks
+          ./gitleaks detect --source . --redact --no-banner --exit-code 1
+
+  deploy:
+    name: Deploy na VPS
+    needs: [secrets]
+    runs-on: [self-hosted, oconde-vps]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Sincronizar o código
+        run: |
+          mkdir -p /opt/toolbelt/src
+          rsync -a --delete --exclude .git "$GITHUB_WORKSPACE/" /opt/toolbelt/src/
+
+      - name: Build e rollout
+        run: GIT_SHA="${GITHUB_SHA::7}" bash /opt/toolbelt/src/infra/deploy.sh
+
+      - name: Conferir no ar
+        run: |
+          for ATTEMPT in 1 2 3 4 5 6; do
+            CODE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://toolbelt.oconde.dev/healthz || echo 000)
+            [ "$CODE" = "200" ] && break
+            sleep 5
+          done
+          echo "/healthz -> $CODE"
+          [ "$CODE" = "200" ]

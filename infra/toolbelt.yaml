@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: toolbelt
+  annotations:
+    oconde.dev/title: "Toolbelt"
+    oconde.dev/description: "Landing page do Toolbelt, app de barra de menus para macOS"
+    oconde.dev/category: app
+    oconde.dev/repo: "~/projects/toolbelt"
+    oconde.dev/note: "Landing estática. /download e /updates/latest.json redirecionam para os assets de github.com/nandobrazil/toolbelt-releases"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: container-defaults
+  namespace: toolbelt
+spec:
+  limits:
+    - type: Container
+      defaultRequest: { cpu: 5m, memory: 8Mi }
+      default: { memory: 64Mi }
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: project-budget
+  namespace: toolbelt
+spec:
+  hard:
+    requests.memory: 128Mi
+    limits.memory: 256Mi
+    pods: "4"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: toolbelt
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector: { matchLabels: { app: app } }
+  template:
+    metadata: { labels: { app: app } }
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: app
+          image: toolbelt/app:latest
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8080 }]
+          readinessProbe:
+            httpGet: { path: /, port: 8080 }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 5m, memory: 8Mi }
+            limits: { memory: 32Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: toolbelt
+spec:
+  selector: { app: app }
+  ports: [{ port: 80, targetPort: 8080 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: toolbelt
+  namespace: toolbelt
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [toolbelt.oconde.dev]
+      secretName: toolbelt-oconde-tls
+  rules:
+    - host: toolbelt.oconde.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: app, port: { number: 80 } } }

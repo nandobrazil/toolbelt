@@ -1,45 +1,102 @@
-# Toolbelt
+<p align="center">
+  <img src="docs/images/icon.png" width="128" height="128" alt="Ícone do Toolbelt: uma fivela dourada com a ponta de um cinto de couro">
+</p>
 
-App pessoal de barra de menus para macOS (Swift/AppKit + SwiftUI) que junta, num único processo leve (~15 MB), o que antes eram vários utilitários: Ice/Bartender, AltTab, Flycut, Rectangle, um monitor de RAM/disco e a troca de contas do Claude Code.
+<h1 align="center">Toolbelt</h1>
 
-Repositório privado: github.com/nandobrazil/toolbelt. macOS 14+ (desenvolvido no macOS 26, MacBook Air M4 com notch).
+<p align="center">
+  <b>Seis utilitários de barra de menus num único app de ~13 MB para macOS.</b><br>
+  Ícones escondidos atrás do notch, alternador de janelas, histórico da área de transferência,<br>
+  atalhos de janela, monitor do sistema e contas do Claude Code.
+</p>
 
-## Módulos
+<p align="center">
+  <a href="https://toolbelt.oconde.dev/download"><b>⬇︎ Baixar para macOS</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://toolbelt.oconde.dev">Site</a>
+  &nbsp;·&nbsp;
+  <a href="CHANGELOG.md">Novidades</a>
+</p>
 
-| Módulo | Identificador | O que faz | Arquivos principais |
-|---|---|---|---|
-| Barra de menus | `menuBarOverflow` | Separador de 10.000 pt esconde ícones à esquerda; o clique no cinto abre o painel com os escondidos (lidos via AX `AXExtrasMenuBar`) e abre o menu do app soltando o separador por 0,6 s + `AXPress` | `MenuBarOverflowModule`, `MenuBarExtras`, `ToolbeltPanel`, `PanelSections`, `ToolbeltIcon` |
-| Alternar janelas | `appSwitcher` | ⌥⇥ (todas) e ⌥\` (app atual); hover, busca com `/`, ações W/M/H/Q, miniaturas opcionais com cache | `AppSwitcherModule`, `WindowCatalog`, `WindowThumbnails` |
-| Área de transferência | `clipboard` | ⌥⌘V abre painel não ativador; texto, imagens e prints; arquivo diário `.md` opcional; aparência configurável | `ClipboardModule`, `ClipboardStore`, `ClipboardPicker`, `ClipboardArchive`, `ScreenshotWatcher` |
-| Janelas | `windowLayout` | Atalhos ⌃⌥ estilo Rectangle via AX | `WindowLayoutModule` |
-| Monitor do sistema | `systemMonitor` | RAM/swap/disco nativos, alertas, relatório do `bin/macscan --json` | `SystemMonitorModule`, `SystemMetrics`, `SystemReportWindow` |
-| Contas do Claude | `claudeAccounts` | N contas do Claude Code via `bin/cca`, selo colorido, terminal preso a uma conta | `ClaudeAccountsModule`, `FileWatcher`, `bin/cca` |
+<p align="center">
+  <img alt="macOS 14 ou mais recente" src="https://img.shields.io/badge/macOS-14%2B-111?logo=apple&logoColor=white">
+  <img alt="Apple Silicon e Intel" src="https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-universal-111">
+  <img alt="Notarizado pela Apple" src="https://img.shields.io/badge/notarizado-Developer%20ID-2ea44f">
+  <img alt="Versão 0.2.0" src="https://img.shields.io/badge/vers%C3%A3o-0.2.0-C98446">
+</p>
 
-Infra comum: `AppController` (orquestra módulos, cinto, painel), `AppSettings` (configurações persistidas), `HotKeyCenter` (atalhos globais Carbon), `SettingsView`/`SettingsWindowController` (janela de configurações), `ShortcutRecorder`, `ToolbeltModule` (protocolo e utilitários).
+---
 
-## Ferramentas de linha de comando (em `bin/`, com link em `~/.local/bin`)
+## Instalação
 
-- `cca`: contas do Claude Code. Registro em `~/.config/claude-accounts/accounts.json`; conta 1 = `~/.claude`, conta 2 = `~/.claude-b`, novas = `~/.claude-N`. Cada conta tem login próprio (Keychain com sufixo pelo `CLAUDE_CONFIG_DIR`) e compartilha `projects/` (conversas e memória), skills, `settings.json` e `CLAUDE.md` por symlink. `cca pin N` prende um terminal a uma conta (`CCA_ACCOUNT`). O `~/.zshrc` tem uma função `claude()` que usa `cca dir`.
-- `macscan`: raio-x do Mac (bateria, disco, memória, CPU, processos, segurança, rede). `--json` alimenta a janela de relatório.
+1. **Baixe** o [Toolbelt.dmg](https://toolbelt.oconde.dev/download).
+2. **Abra o DMG e arraste** o Toolbelt para a pasta Aplicativos.
+3. **Abra o Toolbelt.** O cinto aparece na barra de menus. Quando o macOS pedir, libere em **Ajustes do Sistema → Privacidade e Segurança → Acessibilidade**.
 
-## Build e instalação
+Pronto. O app é assinado com Developer ID e notarizado pela Apple, então abre sem aviso de software não verificado. Ele entra nos Itens de Início e se atualiza sozinho: quando sai versão nova, aparece um aviso no painel do cinto e uma notificação com o botão **Atualizar agora**.
 
-```bash
-scripts/install.sh
-```
+> **Vindo do AltTab, Ice/Bartender, Flycut ou Rectangle?** Feche-os antes (não precisa desinstalar): os atalhos e a função são os mesmos e um rouba o atalho do outro.
 
-Compila em release com `memcap` (teto de 2 GB; regra de memória do Mac de 16 GB), monta `~/Applications/Toolbelt.app`, assina com o certificado autoassinado **Toolbelt Local Signing** e (re)carrega o LaunchAgent `dev.oconde.toolbelt`. Log em `~/Library/Logs/Toolbelt.log`.
+**Requisitos:** macOS 14 Sonoma ou mais recente, Apple Silicon ou Intel. As contas do Claude e o relatório completo do sistema usam `python3` (vem com as Ferramentas de Linha de Comando do Xcode).
 
-Em máquina nova, criar o certificado antes: `scripts/create-signing-identity.sh`. Assinatura ad-hoc faz o macOS esquecer Acessibilidade e Gravação de Tela a cada build.
+**Desinstalar:** feche pelo menu do cinto (**Sair do Toolbelt**) e apague o app de Aplicativos. As configurações ficam em `~/Library/Preferences/dev.oconde.toolbelt.plist` e o histórico em `~/Library/Application Support/Toolbelt`.
+
+## O que vem no cinto
+
+| | Módulo | O que faz |
+|---|---|---|
+| 🧷 | **Barra de menus** | Esconde os ícones que não cabem (inclusive os que somem atrás do notch) e mostra todos num painel abaixo do cinto. Ao lado do cinto, opcionalmente: conta e uso do Claude, RAM, swap ou disco livre. ⌥ clique organiza a barra. |
+| 🪟 | **Alternar janelas** | ⌥⇥ mostra todas as janelas abertas, com ⇧ para voltar. Também aceita ⌘⇥, substituindo o alternador do macOS enquanto o Toolbelt estiver aberto. ⌥\` alterna só entre as janelas do app atual. `/` busca; W fecha a janela, M minimiza, H esconde o app e Q fecha o app. Miniaturas opcionais. |
+| 📋 | **Área de transferência** | ⌥⌘V abre o histórico de textos, imagens e prints sem tirar o foco do app em que você está; um clique cola. Ignora apps escolhidos (gerenciadores de senha) e, se quiser, guarda um arquivo `.md` por dia. |
+| ▦ | **Janelas** | Atalhos ⌃⌥ estilo Rectangle: metades, terços, cantos, maximizar, centralizar e mover entre monitores, com espaçamento configurável. |
+| 📈 | **Monitor do sistema** | RAM, swap e disco livres, com alertas quando a memória aperta ou o disco enche, e um relatório completo (bateria, armazenamento, CPU, processos, segurança, rede). |
+| ✳︎ | **Contas do Claude** | Várias contas do Claude Code lado a lado, com o uso da janela de 5 h e da semana, um selo colorido por conta e um terminal já preso a cada uma. |
+
+Cada módulo liga e desliga em **Configurações → Geral**, e todo atalho pode ser regravado.
+
+### Atalhos padrão
+
+| Ação | Atalho |
+|---|---|
+| Alternar entre todas as janelas | ⌥⇥ (ou ⌘⇥, se você escolher) |
+| Alternar entre as janelas do app atual | ⌥\` |
+| Histórico da área de transferência | ⌥⌘V |
+| Metade esquerda / direita / de cima / de baixo | ⌃⌥ ← → ↑ ↓ |
+| Maximizar · centralizar | ⌃⌥ ↩ · ⌃⌥ C |
+| Terços: primeiro · meio · último | ⌃⌥ D · F · G |
+| Dois terços: à esquerda · à direita | ⌃⌥ E · T |
+| Cantos | ⌃⌥ U · I · J · K |
+| Próximo · anterior monitor | ⌃⌥⌘ → · ⌃⌥⌘ ← |
+
+## Leve de verdade
+
+O Toolbelt fica aberto o dia todo, então cada megabyte conta: **~13 MB de memória e 0% de CPU parado**. Ele não fica perguntando nada de tempos em tempos. Reage a eventos do sistema (arquivos mudando, apps abrindo, a próxima hora de reset do Claude) e dorme no resto do tempo.
+
+## Privacidade
+
+Tudo fica no seu Mac: sem conta, sem telemetria, sem analytics. O único acesso à internet é uma consulta por dia a `toolbelt.oconde.dev/updates/latest.json` para saber se há versão nova (dá para desligar em **Configurações → Geral → Atualizações**). Cada atualização baixada tem o SHA-256 e a assinatura conferidos antes de substituir o app.
 
 ## Permissões
 
-- **Acessibilidade**: obrigatória (colar, mover janelas, ícones escondidos, alternador).
-- **Gravação de Tela**: só para as miniaturas do alternador (desligadas por padrão).
-- **Pasta de prints** (Mesa): para guardar prints no histórico.
-- **Notificações**: alertas do monitor do sistema.
+| Permissão | Para quê | Obrigatória |
+|---|---|---|
+| Acessibilidade | Colar, mover janelas, abrir ícones escondidos e alternar janelas | Sim |
+| Gravação de Tela | Só para as miniaturas do alternador (desligadas por padrão) | Não |
+| Notificações | Alertas do monitor e aviso de atualização | Não |
+| Automação (Terminal) | Abrir o Terminal já logado numa conta do Claude | Não |
 
-## Mais
+## Para desenvolvedores
 
-- `CLAUDE.md`: regras para agentes que forem mexer aqui.
-- `docs/progress.md`: estado atual, decisões e pendências.
+```bash
+git clone https://github.com/nandobrazil/toolbelt.git && cd toolbelt
+scripts/create-signing-identity.sh
+scripts/install.sh
+```
+
+O `create-signing-identity.sh` cria uma vez o certificado local, que mantém as permissões entre builds. O `install.sh` compila em release (Swift 5.9, sem dependências), monta `~/Applications/Toolbelt.app` e abre o app.
+
+- [Arquitetura e módulos](docs/architecture.md)
+- [Como publicar uma versão](docs/releasing.md): Developer ID, notarização, DMG e atualização automática
+- [Estado e decisões](docs/progress.md)
+
+<p align="center"><sub>Feito por Fernando Conde · © 2026</sub></p>
