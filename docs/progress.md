@@ -26,6 +26,9 @@ Configuração atual do usuário: ícone "cinto", nada ao lado do cinto (`inline
 | Atualizador: conferência de assinatura (Team ID, bundle id) | testado contra o AltTab (Developer ID); instalar no lugar e reabrir **só testável com a primeira release assinada** |
 | Build universal (arm64 + x86_64) | testado (pico de 1,6 GB) |
 | Landing | conferida no Chrome headless (claro, escuro, 360–1440 px); Safari e Firefox não vistos |
+| Relatório de falha ponta a ponta | testado: sonda com `fatalError` e o bundle id do Toolbelt gerou `.ips` real, o app detectou, perguntou (bolinha laranja e notificação) e, com "Sempre enviar", o Radar recebeu a falha agrupada com o culpado `failDeliberately(_:) (probe.swift:4)` e runtime `macos` |
+| Feedback (log `feedback.bug`) | lote aceito pelo Radar (202); a janela não foi usada pela tela |
+| Compatibilidade | CI verde no macOS 14.8 (Swift 5.10), 15 e 26.6 (Swift 6.3): build, 9 testes e app aberto por 20 s |
 | Editor "O que fica na barra" (arrastar e soltar) | **compilado e instalado, não testado**: o movimento é um ⌘-arrastar sintético e o projeto não simula cliques para testar; o teste de posição (`AXUIElementCopyElementAtPosition`) acerta dono e elemento de todos os ícones visíveis. Depende do usuário |
 
 ## Decisões
@@ -47,7 +50,8 @@ Configuração atual do usuário: ícone "cinto", nada ao lado do cinto (`inline
 
 ## Pendências e ideias
 
-- Primeira release 0.2.0: criar o certificado Developer ID Application e a credencial `toolbelt-notary`, criar o repositório público `nandobrazil/toolbelt-releases`, rodar `scripts/release.sh` e `scripts/publish-release.sh`. Até lá o botão de download da landing dá 404.
+- 0.2.0 publicada em 22/10/2026 (notarizada, DMG e zip em `toolbelt-releases`). Próxima: 0.3.0 com inglês, editor da barra e relatórios, depois de o dono confirmar o arrasto do editor.
+- Na troca de versão, o app do dono (build local em `~/Applications`, assinatura local) não instala atualização no lugar: o botão abre a página. Para testar a troca de verdade, instalar o DMG da 0.2.0 em `/Applications` (ou assinar o build local com o Developer ID) e publicar a 0.3.0.
 - Depois da primeira release, testar a troca de versão de verdade (0.2.0 → 0.2.1) pelo botão Atualizar.
 
 - Investigar por que `panelShowsClaude`/`panelShowsSystem` apareceram `false` sem ação do usuário (foram religados). Se repetir, pode ser bug ao salvar.

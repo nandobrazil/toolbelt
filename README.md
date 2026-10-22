@@ -76,7 +76,13 @@ O Toolbelt fica aberto o dia todo, então cada megabyte conta: **~13 MB de memó
 
 ## Privacidade
 
-Tudo fica no seu Mac: sem conta, sem telemetria, sem analytics. O único acesso à internet é uma consulta por dia a `toolbelt.oconde.dev/updates/latest.json` para saber se há versão nova (dá para desligar em **Configurações → Geral → Atualizações**). Cada atualização baixada tem o SHA-256 e a assinatura conferidos antes de substituir o app.
+Tudo fica no seu Mac: sem conta, sem telemetria, sem analytics. O app só usa a internet para:
+
+- **Atualizações:** uma consulta por dia a `toolbelt.oconde.dev/updates/latest.json` (dá para desligar em **Configurações → Geral → Atualizações**). Cada atualização baixada tem o SHA-256 e a assinatura conferidos antes de substituir o app.
+- **Relatórios de falha, só com a sua permissão:** quando o Toolbelt fecha ou trava, ele pergunta se pode mandar o relatório técnico (tipo do erro, onde falhou, versão do app e do macOS, modelo do Mac). Você escolhe **Enviar**, **Sempre enviar** ou **Agora não**, e muda depois em **Configurações → Ajuda e relatórios**.
+- **Relatar um problema ou sugestão:** pelo menu do cinto, com prévia exata do que vai ser enviado. O e-mail é opcional.
+
+Nada do que você copia, abre ou digita sai do Mac.
 
 ## Permissões
 

@@ -76,7 +76,13 @@ Toolbelt stays open all day, so every megabyte counts: **~13 MB of memory and 0%
 
 ## Privacy
 
-Everything stays on your Mac: no account, no telemetry, no analytics. The only network access is one daily request to `toolbelt.oconde.dev/updates/latest.json` to check for a new version (you can turn it off in **Settings → General → Updates**). Every downloaded update has its SHA-256 and signature verified before it replaces the app.
+Everything stays on your Mac: no account, no telemetry, no analytics. The app only goes online for:
+
+- **Updates:** one daily request to `toolbelt.oconde.dev/updates/latest.json` (you can turn it off in **Settings → General → Updates**). Every downloaded update has its SHA-256 and signature verified before it replaces the app.
+- **Crash reports, only with your permission:** when Toolbelt quits or hangs unexpectedly, it asks whether it may send the technical report (error type, where it failed, app and macOS versions, Mac model). You pick **Send**, **Always send** or **Not now**, and can change it later in **Settings → Help & reports**.
+- **Reporting a problem or a suggestion:** from the belt menu, with an exact preview of what will be sent. Your email is optional.
+
+Nothing you copy, open or type leaves your Mac.
 
 ## Permissions
 
