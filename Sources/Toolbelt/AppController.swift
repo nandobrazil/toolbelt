@@ -12,6 +12,7 @@ final class AppController: NSObject {
     private let defaults = UserDefaults.standard
 
     func start() {
+        NSLog("Toolbelt: started, accessibility trusted=\(AccessibilityPermission.isTrusted)")
         let enabledModules = modules.filter(isEnabled)
         startIfEnabled(claudeAccounts)
         createChevron()
@@ -59,7 +60,7 @@ final class AppController: NSObject {
         item.button?.target = self
         item.button?.action = #selector(chevronClicked)
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        item.button?.toolTip = "Clique: mostrar/esconder ícones · Clique direito: menu do Toolbelt"
+        item.button?.toolTip = "Clique: ícones escondidos · ⌥ clique: organizar a barra · Clique direito: menu do Toolbelt"
         chevronItem = item
     }
 
@@ -68,8 +69,10 @@ final class AppController: NSObject {
         let symbolName: String
         if !overflowRunning {
             symbolName = "wrench.and.screwdriver"
+        } else if !menuBarOverflow.isCollapsed {
+            symbolName = "chevron.right"
         } else {
-            symbolName = menuBarOverflow.isCollapsed ? "chevron.left" : "chevron.right"
+            symbolName = menuBarOverflow.isPanelVisible ? "chevron.up" : "chevron.down"
         }
         let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Toolbelt")
         image?.isTemplate = true
@@ -80,10 +83,12 @@ final class AppController: NSObject {
         let isRightClick = NSApp.currentEvent?.type == .rightMouseUp
         let isOptionClick = NSApp.currentEvent?.modifierFlags.contains(.option) ?? false
         let overflowRunning = runningModuleIdentifiers.contains(menuBarOverflow.identifier)
-        if isRightClick || isOptionClick || !overflowRunning {
+        if isRightClick || !overflowRunning {
             showMainMenu()
-        } else {
-            menuBarOverflow.toggle()
+        } else if isOptionClick {
+            menuBarOverflow.toggleArrangeMode()
+        } else if let anchor = chevronItem?.button?.window?.frame {
+            menuBarOverflow.togglePanel(below: anchor)
         }
     }
 

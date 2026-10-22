@@ -45,6 +45,7 @@ cat > "$launch_agent" <<PLIST
   <key>Label</key><string>$label</string>
   <key>ProgramArguments</key>
   <array><string>$app_dir/Contents/MacOS/Toolbelt</string></array>
+  <key>StandardErrorPath</key><string>$HOME/Library/Logs/Toolbelt.log</string>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><false/>
 </dict>
