@@ -71,6 +71,9 @@ final class SettingsBridge: ObservableObject {
     @Published var clipboardStats = ClipboardStats()
     @Published var claudeAccounts: [ClaudeAccountSummary] = []
     @Published var isAccessibilityTrusted = AccessibilityPermission.isTrusted
+    @Published var menuBarLayout = MenuBarLayout()
+    @Published var isMovingMenuBarItem = false
+    @Published var menuBarMoveOutcome: MenuBarMoveOutcome?
 
     var modules: [ModuleInfo] = []
     var loadClipboardStats: () -> ClipboardStats = { ClipboardStats() }
@@ -85,11 +88,33 @@ final class SettingsBridge: ObservableObject {
     var arrangeMenuBar: () -> Void = {}
     var openSystemReport: () -> Void = {}
     var loginClaude: (String) -> Void = { _ in }
+    var loadMenuBarLayout: () -> MenuBarLayout = { MenuBarLayout() }
+    var moveMenuBarItem: (String, MenuBarLayoutTarget, @escaping (MenuBarMoveOutcome) -> Void) -> Void = { _, _, completion in
+        completion(.unchanged)
+    }
 
     func refresh() {
         clipboardStats = loadClipboardStats()
         claudeAccounts = loadClaudeAccounts()
         isAccessibilityTrusted = AccessibilityPermission.isTrusted
+        if !isMovingMenuBarItem {
+            let layout = loadMenuBarLayout()
+            if layout != menuBarLayout {
+                menuBarLayout = layout
+            }
+        }
+    }
+
+    func requestMenuBarMove(_ identifier: String, to target: MenuBarLayoutTarget) {
+        guard !isMovingMenuBarItem else { return }
+        isMovingMenuBarItem = true
+        menuBarMoveOutcome = nil
+        moveMenuBarItem(identifier, target) { [weak self] outcome in
+            guard let self else { return }
+            self.isMovingMenuBarItem = false
+            self.menuBarLayout = self.loadMenuBarLayout()
+            self.menuBarMoveOutcome = outcome
+        }
     }
 }
 
@@ -229,6 +254,16 @@ private struct MenuBarSettingsPage: View {
     var body: some View {
         Form {
             ModuleToggleSection(settings: settings, section: .menuBar, summary: "Esconde ícones da barra e mostra todos num painel abaixo da setinha.")
+
+            if settings.isModuleEnabled("menuBarOverflow") {
+                Section {
+                    MenuBarLayoutEditor(bridge: bridge)
+                } header: {
+                    Text("O que fica na barra")
+                } footer: {
+                    Text("Arraste um ícone entre as faixas ou para antes de outro. O Toolbelt move o ícone de verdade fazendo um ⌘-arrastar na barra, com o cursor escondido por meio segundo, e confere se ele chegou. O relógio e a Central de Controle são fixos no macOS. \(Image(systemName: "eye.slash")) marca ícones que ficam atrás do notch.")
+                }
+            }
 
             Section {
                 ForEach(InlineInfo.allCases) { info in

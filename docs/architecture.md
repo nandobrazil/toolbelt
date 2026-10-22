@@ -8,7 +8,7 @@ Código em github.com/nandobrazil/toolbelt (privado); downloads em github.com/na
 
 | Módulo | Identificador | O que faz | Arquivos principais |
 |---|---|---|---|
-| Barra de menus | `menuBarOverflow` | Separador de 10.000 pt esconde ícones à esquerda; o clique no cinto abre o painel com os escondidos (lidos via AX `AXExtrasMenuBar`) e abre o menu do app soltando o separador por 0,6 s + `AXPress` | `MenuBarOverflowModule`, `MenuBarExtras`, `ToolbeltPanel`, `PanelSections`, `ToolbeltIcon` |
+| Barra de menus | `menuBarOverflow` | Separador de 10.000 pt esconde ícones à esquerda; o clique no cinto abre o painel com os escondidos (lidos via AX `AXExtrasMenuBar`) e abre o menu do app soltando o separador por 0,6 s + `AXPress` | `MenuBarOverflowModule`, `MenuBarExtras`, `MenuBarLayout` (editor: mover ícones com ⌘-arrastar sintético), `MenuBarLayoutEditor`, `ToolbeltPanel`, `PanelSections`, `ToolbeltIcon` |
 | Alternar janelas | `appSwitcher` | ⌥⇥ (todas) e ⌥\` (app atual), ou ⌘⇥/⌘\` no lugar dos do macOS; hover, busca com `/`, ações W/M/H/Q, miniaturas opcionais com cache | `AppSwitcherModule`, `WindowCatalog`, `WindowThumbnails`, `NativeWindowSwitching` |
 | Área de transferência | `clipboard` | ⌥⌘V abre painel não ativador; texto, imagens e prints; arquivo diário `.md` opcional; aparência configurável | `ClipboardModule`, `ClipboardStore`, `ClipboardPicker`, `ClipboardArchive`, `ScreenshotWatcher` |
 | Janelas | `windowLayout` | Atalhos ⌃⌥ estilo Rectangle via AX | `WindowLayoutModule` |

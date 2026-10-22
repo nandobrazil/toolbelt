@@ -18,8 +18,12 @@ final class MenuBarOverflowModule: ToolbeltModule {
     private var popupWatchTimer: Timer?
     private static let cacheRefreshInterval: TimeInterval = 15
 
+    private static let moveRevealDelay: TimeInterval = 0.4
+
     private(set) var isCollapsed = false
     private(set) var cachedExtras: [MenuBarExtra] = []
+    private var cachedSeparatorMinX: CGFloat?
+    private var isMovingItem = false
     private var cacheTimer: Timer?
     private var isRefreshingCache = false
     private var pendingRefreshCompletions: [([MenuBarExtra]) -> Void] = []
@@ -66,6 +70,7 @@ final class MenuBarOverflowModule: ToolbeltModule {
                 self.isRefreshingCache = false
                 guard self.isCollapsed else { return }
                 self.cachedExtras = extras
+                self.cachedSeparatorMinX = self.separatorItem?.button?.window?.frame.minX
                 let hidden = MenuBarExtras.hidden(from: extras)
                 let completions = self.pendingRefreshCompletions
                 self.pendingRefreshCompletions.removeAll()
@@ -93,6 +98,67 @@ final class MenuBarOverflowModule: ToolbeltModule {
             collapse()
         }
         return MenuBarExtras.hidden(from: cachedExtras)
+    }
+
+    func layout() -> MenuBarLayout {
+        guard let separatorX = cachedSeparatorMinX else { return MenuBarLayout() }
+        let visibleStart = MenuBarExtras.visibleAreaStart()
+        var layout = MenuBarLayout()
+        for (extra, identifier) in zip(cachedExtras, MenuBarExtras.identifiers(for: cachedExtras)) {
+            let isHidden = extra.frame.minX < separatorX
+            let item = MenuBarLayoutItem(
+                id: identifier,
+                title: extra.title,
+                label: extra.label,
+                icon: extra.icon,
+                systemIdentifier: extra.systemIdentifier,
+                isMovable: extra.isMovable,
+                isBehindNotch: !isHidden && extra.frame.minX < visibleStart
+            )
+            if isHidden {
+                layout.hidden.append(item)
+            } else {
+                layout.visible.append(item)
+            }
+        }
+        return layout
+    }
+
+    func moveItem(withID identifier: String, to target: MenuBarLayoutTarget, completion: @escaping (MenuBarMoveOutcome) -> Void) {
+        guard AccessibilityPermission.isTrusted else {
+            completion(.failed("Precisa da permissão de Acessibilidade para mover ícones."))
+            return
+        }
+        guard NSMenu.menuBarVisible() else {
+            completion(.failed("A barra de menus está escondida agora (tela cheia ou ocultar automaticamente). Nada foi movido."))
+            return
+        }
+        guard NSApp.isActive, separatorItem != nil, !isMovingItem else {
+            completion(.failed("Deixe a janela de Configurações na frente e arraste de novo."))
+            return
+        }
+        isMovingItem = true
+        let wasCollapsed = isCollapsed
+        reveal()
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.moveRevealDelay) { [weak self] in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let outcome = MenuBarItemMover.move(itemWithID: identifier, to: target) {
+                    DispatchQueue.main.sync { self?.separatorItem?.button?.window?.frame }
+                }
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.isMovingItem = false
+                    guard wasCollapsed else {
+                        completion(outcome)
+                        return
+                    }
+                    self.collapse()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Self.moveRevealDelay) {
+                        self.refreshCache { _ in completion(outcome) }
+                    }
+                }
+            }
+        }
     }
 
     func toggleArrangeMode() {

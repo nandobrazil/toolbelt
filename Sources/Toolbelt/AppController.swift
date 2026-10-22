@@ -105,6 +105,17 @@ final class AppController: NSObject {
         bridge.previewClipboard = { [weak self] in self?.clipboard.togglePicker() }
         bridge.arrangeMenuBar = { [weak self] in self?.menuBarOverflow.toggleArrangeMode() }
         bridge.loginClaude = { [weak self] account in self?.claudeAccounts.login(account) }
+        bridge.loadMenuBarLayout = { [weak self] in
+            guard let self, self.isRunning(self.menuBarOverflow) else { return MenuBarLayout() }
+            return self.menuBarOverflow.layout()
+        }
+        bridge.moveMenuBarItem = { [weak self] identifier, target, completion in
+            guard let self, self.isRunning(self.menuBarOverflow) else {
+                completion(.failed("Ative o módulo da barra de menus para organizar os ícones."))
+                return
+            }
+            self.menuBarOverflow.moveItem(withID: identifier, to: target, completion: completion)
+        }
     }
 
     private func applySettings() {

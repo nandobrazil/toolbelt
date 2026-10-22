@@ -1,12 +1,20 @@
 import AppKit
 
 struct MenuBarExtra {
+    private static let fixedSystemIdentifiers: Set<String> = ["com.apple.menuextra.clock", "com.apple.menuextra.controlcenter"]
+
     let element: AXUIElement
     let processIdentifier: pid_t
     let applicationName: String
+    let systemIdentifier: String?
     let icon: NSImage?
+    let title: String
     let label: String
     let frame: CGRect
+
+    var isMovable: Bool {
+        !Self.fixedSystemIdentifiers.contains(systemIdentifier ?? "")
+    }
 
     func press() {
         let element = element
@@ -24,6 +32,32 @@ enum MenuBarExtras {
     private static let skipListLifetime: TimeInterval = 60
     private static var processesWithoutExtras: Set<pid_t> = []
     private static var skipListCreatedAt = Date()
+
+    static func identifiers(for extras: [MenuBarExtra]) -> [String] {
+        var occurrences: [String: Int] = [:]
+        return extras.map { extra in
+            let base = "\(extra.processIdentifier)|\(extra.systemIdentifier ?? extra.title)"
+            let index = occurrences[base, default: 0]
+            occurrences[base] = index + 1
+            return "\(base)|\(index)"
+        }
+    }
+
+    static func owner(at point: CGPoint) -> pid_t? {
+        var element: AXUIElement?
+        guard AXUIElementCopyElementAtPosition(AXUIElementCreateSystemWide(), Float(point.x), Float(point.y), &element) == .success,
+              let element else { return nil }
+        var processIdentifier: pid_t = 0
+        guard AXUIElementGetPid(element, &processIdentifier) == .success else { return nil }
+        return processIdentifier
+    }
+
+    static func notchRange() -> ClosedRange<CGFloat>? {
+        guard let screen = NSScreen.screens.first(where: { $0.auxiliaryTopLeftArea != nil }),
+              let left = screen.auxiliaryTopLeftArea,
+              let right = screen.auxiliaryTopRightArea else { return nil }
+        return (screen.frame.minX + left.maxX)...(screen.frame.minX + right.minX)
+    }
 
     static func hidden(from extras: [MenuBarExtra]) -> [MenuBarExtra] {
         let visibleStart = visibleAreaStart()
@@ -85,12 +119,18 @@ enum MenuBarExtras {
             guard let frame = frame(of: child), frame.width > 0, frame.width < maximumItemWidth else { return nil }
             let description = (copyAttribute(child, kAXDescriptionAttribute) as? String) ?? ""
             let title = (copyAttribute(child, kAXTitleAttribute) as? String) ?? ""
+            let help = (copyAttribute(child, kAXHelpAttribute) as? String) ?? ""
             let label = [title, description].first { !$0.isEmpty } ?? name
+            let shortTitle = [title, description, help].first { !$0.isEmpty }?
+                .components(separatedBy: ",").first?
+                .trimmingCharacters(in: .whitespaces)
             return MenuBarExtra(
                 element: child,
                 processIdentifier: application.processIdentifier,
                 applicationName: name,
+                systemIdentifier: copyAttribute(child, "AXIdentifier") as? String,
                 icon: application.icon,
+                title: shortTitle.flatMap { $0.isEmpty ? nil : $0 } ?? name,
                 label: label == name ? name : "\(name) — \(label)",
                 frame: frame
             )
@@ -110,7 +150,7 @@ enum MenuBarExtras {
         }
     }
 
-    private static func visibleAreaStart() -> CGFloat {
+    static func visibleAreaStart() -> CGFloat {
         let notchedScreen = NSScreen.screens.first { $0.auxiliaryTopRightArea != nil }
         if let notchedScreen, let rightArea = notchedScreen.auxiliaryTopRightArea {
             return notchedScreen.frame.minX + rightArea.minX

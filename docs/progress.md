@@ -26,6 +26,7 @@ Configuração atual do usuário: ícone "cinto", nada ao lado do cinto (`inline
 | Atualizador: conferência de assinatura (Team ID, bundle id) | testado contra o AltTab (Developer ID); instalar no lugar e reabrir **só testável com a primeira release assinada** |
 | Build universal (arm64 + x86_64) | testado (pico de 1,6 GB) |
 | Landing | conferida no Chrome headless (claro, escuro, 360–1440 px); Safari e Firefox não vistos |
+| Editor "O que fica na barra" (arrastar e soltar) | **compilado e instalado, não testado**: o movimento é um ⌘-arrastar sintético e o projeto não simula cliques para testar; o teste de posição (`AXUIElementCopyElementAtPosition`) acerta dono e elemento de todos os ícones visíveis. Depende do usuário |
 
 ## Decisões
 
@@ -42,6 +43,7 @@ Configuração atual do usuário: ícone "cinto", nada ao lado do cinto (`inline
 - Atualizador próprio em vez do Sparkle: menos memória, UI no painel e nas Configurações, e a segurança vem do SHA-256 do manifesto mais a exigência de assinatura Apple do mesmo Team ID e bundle id. Build local (sem Team ID) só abre a página de download.
 - Reabrir depois de atualizar via `NSWorkspace.openApplication` com `createsNewApplicationInstance` e `--relaunch-after <pid>`: um processo filho morreria junto com o job do launchd.
 - Log: o app redireciona o stderr para `~/Library/Logs/Toolbelt.log` (sem LaunchAgent não há `StandardErrorPath`).
+- Editor da barra: o macOS não tem API para mover ícone de outro app, então o Toolbelt faz o que Ice e Bartender fazem, um ⌘-arrastar sintético (cursor escondido e desacoplado do mouse por ~0,4 s, devolvido ao lugar). Travas: só com a janela de Configurações ativa e a barra visível; antes de clicar, o teste de posição exige o dono certo debaixo do ponto (ou o ponto atrás do notch, onde não há conteúdo); depois, confere pela Acessibilidade que o ícone ficou colado no vizinho esperado. Relógio e Central de Controle são fixos. O modo organizar continua como plano B.
 
 ## Pendências e ideias
 
