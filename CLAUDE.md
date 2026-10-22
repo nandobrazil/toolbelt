@@ -4,6 +4,7 @@ Leia `README.md` (arquitetura) e `docs/progress.md` (estado, decisões, pendênc
 
 ## Regras do projeto
 
+- **Grafo do repositório:** `graphify-out/graph.json` + `GRAPH_REPORT.md`; pergunta sobre arquitetura → `graphify query` antes de abrir arquivos; depois de mudanças grandes, rodar a skill `building-project-graph`.
 - **Leveza é requisito.** O app roda o tempo todo; hoje ~15 MB de footprint e 0% de CPU parado. Nada de polling quando existir gatilho (FileWatcher, notificações do NSWorkspace, timer para o próximo evento). Medir com `footprint $(pgrep -x Toolbelt)` depois de mudanças.
 - **Build só pelo `scripts/install.sh`** (usa `memcap`). Build avulso: `memcap 2048 -- swift build -c release`. Nunca build sem teto no Mac (há um hook que bloqueia).
 - **Não trocar a assinatura para ad-hoc.** O certificado "Toolbelt Local Signing" mantém as permissões entre builds.
