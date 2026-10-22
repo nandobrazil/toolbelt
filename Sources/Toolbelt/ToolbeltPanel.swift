@@ -27,6 +27,7 @@ final class ToolbeltPanel {
     func show(
         hiddenExtras: [MenuBarExtra]?,
         columns: Int,
+        sections: [NSView] = [],
         quickActions: [PanelAction],
         trailingActions: [PanelAction],
         below anchor: NSRect,
@@ -36,6 +37,7 @@ final class ToolbeltPanel {
         let content = makeContent(
             hiddenExtras: hiddenExtras,
             columns: max(columns, 4),
+            sections: sections,
             quickActions: quickActions,
             trailingActions: trailingActions,
             onSelectExtra: onSelectExtra
@@ -74,6 +76,8 @@ final class ToolbeltPanel {
         }
     }
 
+    var hasOpenPanel: Bool { panel != nil }
+
     func close() {
         if let outsideClickMonitor {
             NSEvent.removeMonitor(outsideClickMonitor)
@@ -94,6 +98,7 @@ final class ToolbeltPanel {
     private func makeContent(
         hiddenExtras: [MenuBarExtra]?,
         columns: Int,
+        sections: [NSView],
         quickActions: [PanelAction],
         trailingActions: [PanelAction],
         onSelectExtra: @escaping (MenuBarExtra) -> Void
@@ -135,6 +140,15 @@ final class ToolbeltPanel {
             divider.boxType = .separator
             stack.addArrangedSubview(divider)
             divider.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        }
+
+        for section in sections {
+            stack.addArrangedSubview(section)
+            section.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+            let sectionDivider = NSBox()
+            sectionDivider.boxType = .separator
+            stack.addArrangedSubview(sectionDivider)
+            sectionDivider.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
 
         let footer = NSStackView()

@@ -226,6 +226,44 @@ private struct MenuBarSettingsPage: View {
         Form {
             ModuleToggleSection(settings: settings, section: .menuBar, summary: "Esconde ícones da barra e mostra todos num painel abaixo da setinha.")
 
+            Section {
+                ForEach(InlineInfo.allCases) { info in
+                    Toggle(info.title, isOn: Binding(
+                        get: { settings.values.menuBar.inlineInfo.contains(info) },
+                        set: { enabled in
+                            var selected = Set(settings.values.menuBar.inlineInfo)
+                            if enabled { selected.insert(info) } else { selected.remove(info) }
+                            settings.values.menuBar.inlineInfo = InlineInfo.allCases.filter { selected.contains($0) }
+                        }
+                    ))
+                    .toggleStyle(.switch)
+                }
+            } header: {
+                Text("Ao lado do ícone do Toolbelt")
+            } footer: {
+                Text("Mostra essas informações junto do cinto, num único item. Combine com desligar os ícones próprios do Claude e do monitor para deixar a barra limpa.")
+            }
+
+            Section {
+                Toggle("Contas do Claude (trocar, uso, abrir terminal)", isOn: $settings.values.menuBar.panelShowsClaude)
+                    .toggleStyle(.switch)
+                Toggle("Sistema (memória, disco, relatório do macscan)", isOn: $settings.values.menuBar.panelShowsSystem)
+                    .toggleStyle(.switch)
+            } header: {
+                Text("No painel do Toolbelt")
+            } footer: {
+                Text("O painel abre ao clicar no cinto.")
+            }
+
+            Section {
+                Toggle("Ícone próprio das contas do Claude", isOn: $settings.values.claude.showInMenuBar)
+                    .toggleStyle(.switch)
+                Toggle("Ícone próprio do monitor do sistema", isOn: $settings.values.systemMonitor.showInMenuBar)
+                    .toggleStyle(.switch)
+            } header: {
+                Text("Ícones separados na barra")
+            }
+
             Section("Aparência") {
                 Picker("Ícone do Toolbelt", selection: $settings.values.menuBar.iconStyle) {
                     ForEach(ChevronStyle.allCases) { style in
@@ -689,6 +727,8 @@ private struct ClaudeSettingsPage: View {
             ModuleToggleSection(settings: settings, section: .claude, summary: "Alterna entre contas do Claude Code e mostra o uso de cada uma.")
 
             Section("Ícone na barra") {
+                Toggle("Ícone próprio na barra", isOn: $settings.values.claude.showInMenuBar)
+                    .toggleStyle(.switch)
                 Toggle("Mostrar o nome da conta ativa (apelido ou início do e-mail)", isOn: $settings.values.claude.showNameInTitle)
                     .toggleStyle(.switch)
                 Toggle("Mostrar o uso das últimas 5 h", isOn: $settings.values.claude.showUsageInTitle)

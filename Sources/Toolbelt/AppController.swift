@@ -91,6 +91,8 @@ final class AppController: NSObject {
         bridge.openClaudeTerminal = { [weak self] account in self?.claudeAccounts.openTerminal(for: account) }
         claudeAccounts.onOpenSettings = { [weak self] in self?.openSettings(section: .claude) }
         systemMonitor.onOpenReport = { [weak self] in self?.openSystemReport() }
+        systemMonitor.onChange = { [weak self] in self?.updateChevronIcon() }
+        claudeAccounts.onChange = { [weak self] in self?.updateChevronIcon() }
         systemMonitor.onOpenSettings = { [weak self] in self?.openSettings(section: .system) }
         bridge.openSystemReport = { [weak self] in self?.openSystemReport() }
         bridge.clearClipboardHistory = { [weak self] in self?.clipboard.clearHistory() }
@@ -131,8 +133,9 @@ final class AppController: NSObject {
     }
 
     private func createChevron() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.autosaveName = "toolbelt.chevron"
+        item.button?.imagePosition = .imageLeading
         item.button?.target = self
         item.button?.action = #selector(chevronClicked)
         item.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
@@ -141,13 +144,72 @@ final class AppController: NSObject {
     }
 
     private func updateChevronIcon() {
+        guard let button = chevronItem?.button else { return }
         if isRunning(menuBarOverflow) && !menuBarOverflow.isCollapsed {
             let image = NSImage(systemSymbolName: "chevron.right", accessibilityDescription: "Toolbelt")
             image?.isTemplate = true
-            chevronItem?.button?.image = image
-            return
+            button.image = image
+        } else {
+            button.image = settings.values.menuBar.iconStyle.image(isOpen: panel.isVisible)
         }
-        chevronItem?.button?.image = settings.values.menuBar.iconStyle.image(isOpen: panel.isVisible)
+        button.attributedTitle = inlineTitle()
+    }
+
+    private func inlineTitle() -> NSAttributedString {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        let title = NSMutableAttributedString()
+        func append(_ text: String, color: NSColor = .labelColor) {
+            title.append(NSAttributedString(string: (title.length == 0 ? " " : " · ") + text, attributes: [.font: font, .foregroundColor: color]))
+        }
+        let snapshot = systemMonitor.snapshot
+        let activeAccount = isRunning(claudeAccounts) ? claudeAccounts.activeAccount : nil
+        for info in settings.values.menuBar.inlineInfo {
+            switch info {
+            case .claudeAccount:
+                guard let activeAccount else { continue }
+                let dotColor = NSColor(hex: settings.values.claude.colorHex(for: activeAccount.account))
+                title.append(NSAttributedString(string: title.length == 0 ? " ●" : " · ●", attributes: [.font: font, .foregroundColor: dotColor]))
+                title.append(NSAttributedString(string: " " + activeAccount.shortName, attributes: [.font: font, .foregroundColor: NSColor.labelColor]))
+            case .claudeUsage:
+                if let percent = activeAccount?.fiveHour.currentPercent {
+                    append("\(percent)%", color: percent >= 90 ? .systemOrange : .labelColor)
+                }
+            case .memory:
+                guard isRunning(systemMonitor) else { continue }
+                append("RAM \(Int((snapshot.memoryUsedRatio * 100).rounded()))%", color: snapshot.pressureLevel >= 2 ? .systemOrange : .labelColor)
+            case .swap:
+                guard isRunning(systemMonitor) else { continue }
+                append("swap \(ByteFormat.memory(snapshot.swapUsed))")
+            case .disk:
+                guard isRunning(systemMonitor) else { continue }
+                append(ByteFormat.storage(snapshot.diskFree), color: snapshot.diskFreeRatio < 0.1 ? .systemOrange : .labelColor)
+            }
+        }
+        return title
+    }
+
+    private func panelSections() -> [NSView] {
+        var sections: [NSView] = []
+        if settings.values.menuBar.panelShowsClaude && isRunning(claudeAccounts) && !claudeAccounts.accounts.isEmpty {
+            sections.append(PanelSections.claude(
+                accounts: claudeAccounts.accounts,
+                onUse: { [weak self] account in
+                    self?.panel.close()
+                    self?.claudeAccounts.use(account)
+                },
+                onOpenTerminal: { [weak self] account in
+                    self?.panel.close()
+                    self?.claudeAccounts.openTerminal(for: account)
+                }
+            ))
+        }
+        if settings.values.menuBar.panelShowsSystem && isRunning(systemMonitor) {
+            systemMonitor.sample()
+            sections.append(PanelSections.system(snapshot: systemMonitor.snapshot) { [weak self] in
+                self?.openSystemReport()
+            })
+        }
+        return sections
     }
 
     @objc private func chevronClicked() {
@@ -187,6 +249,7 @@ final class AppController: NSObject {
         panel.show(
             hiddenExtras: hiddenExtras,
             columns: settings.values.menuBar.panelColumns,
+            sections: panelSections(),
             quickActions: quickActions(),
             trailingActions: [
                 PanelAction(title: "Configurações", symbolName: "gearshape") { [weak self] in self?.openSettings() },
@@ -216,16 +279,6 @@ final class AppController: NSObject {
         if isRunning(windowLayout) {
             actions.append(PanelAction(title: "Atalhos de janela", symbolName: "rectangle.split.2x1") { [weak self] in
                 self?.openSettings(section: .windows)
-            })
-        }
-        if isRunning(systemMonitor) {
-            actions.append(PanelAction(title: "Relatório do Mac (macscan)", symbolName: "gauge.with.dots.needle.33percent") { [weak self] in
-                self?.openSystemReport()
-            })
-        }
-        if isRunning(claudeAccounts) {
-            actions.append(PanelAction(title: "Trocar a conta ativa do Claude", symbolName: "sparkle") { [weak self] in
-                self?.claudeAccounts.switchAccount()
             })
         }
         return actions

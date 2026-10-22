@@ -111,16 +111,42 @@ struct ClipboardPanelAppearance: Codable, Equatable {
     }
 }
 
+enum InlineInfo: String, Codable, CaseIterable, Identifiable {
+    case claudeAccount
+    case claudeUsage
+    case memory
+    case swap
+    case disk
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .claudeAccount: return "Conta ativa do Claude"
+        case .claudeUsage: return "Uso de 5 h do Claude"
+        case .memory: return "RAM em uso (%)"
+        case .swap: return "Swap em uso"
+        case .disk: return "Espaço livre no disco"
+        }
+    }
+}
+
 struct MenuBarSettings: Codable, Equatable {
     var iconStyle: ChevronStyle = .belt
     var panelColumns = 10
     var arrangeModeSeconds = 30
+    var inlineInfo: [InlineInfo] = []
+    var panelShowsClaude = true
+    var panelShowsSystem = true
 
     init() {}
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = MenuBarSettings()
+        inlineInfo = (try? container.decodeIfPresent([InlineInfo].self, forKey: .inlineInfo)) ?? defaults.inlineInfo
+        panelShowsClaude = (try? container.decodeIfPresent(Bool.self, forKey: .panelShowsClaude)) ?? defaults.panelShowsClaude
+        panelShowsSystem = (try? container.decodeIfPresent(Bool.self, forKey: .panelShowsSystem)) ?? defaults.panelShowsSystem
         iconStyle = (try? container.decodeIfPresent(ChevronStyle.self, forKey: .iconStyle)) ?? defaults.iconStyle
         panelColumns = (try? container.decodeIfPresent(Int.self, forKey: .panelColumns)) ?? defaults.panelColumns
         arrangeModeSeconds = (try? container.decodeIfPresent(Int.self, forKey: .arrangeModeSeconds)) ?? defaults.arrangeModeSeconds
@@ -214,6 +240,7 @@ struct ClaudeSettings: Codable, Equatable {
 
     var showUsageInTitle = true
     var showNameInTitle = true
+    var showInMenuBar = true
     var accountColors: [String: String] = [:]
     var terminalShortcuts: [String: KeyCombo] = [:]
 
@@ -223,6 +250,7 @@ struct ClaudeSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         showUsageInTitle = (try? container.decodeIfPresent(Bool.self, forKey: .showUsageInTitle)) ?? true
         showNameInTitle = (try? container.decodeIfPresent(Bool.self, forKey: .showNameInTitle)) ?? true
+        showInMenuBar = (try? container.decodeIfPresent(Bool.self, forKey: .showInMenuBar)) ?? true
         accountColors = (try? container.decodeIfPresent([String: String].self, forKey: .accountColors)) ?? [:]
         terminalShortcuts = (try? container.decodeIfPresent([String: KeyCombo].self, forKey: .terminalShortcuts)) ?? [:]
     }

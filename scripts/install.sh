@@ -8,7 +8,7 @@ launch_agent="$HOME/Library/LaunchAgents/$label.plist"
 signing_identity="${TOOLBELT_SIGNING_IDENTITY:-Toolbelt Local Signing}"
 
 cd "$project_dir"
-build_memory_limit_mb="${TOOLBELT_BUILD_MEMORY_MB:-3072}"
+build_memory_limit_mb="${TOOLBELT_BUILD_MEMORY_MB:-2048}"
 if command -v memcap >/dev/null 2>&1; then
   memcap "$build_memory_limit_mb" -- swift build -c release
 else

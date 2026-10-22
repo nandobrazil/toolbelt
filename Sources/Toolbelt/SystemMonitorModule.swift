@@ -21,6 +21,7 @@ final class SystemMonitorModule: NSObject, ToolbeltModule, NSMenuDelegate {
     private var registeredSettings: SystemMonitorSettings?
     var onOpenReport: (() -> Void)?
     var onOpenSettings: (() -> Void)?
+    var onChange: (() -> Void)?
 
     private var settings: SystemMonitorSettings { AppSettings.shared.values.systemMonitor }
 
@@ -85,10 +86,11 @@ final class SystemMonitorModule: NSObject, ToolbeltModule, NSMenuDelegate {
         statusItem = nil
     }
 
-    private func sample() {
+    func sample() {
         snapshot = SystemMetrics.snapshot()
         updateTitle()
         evaluateAlerts()
+        onChange?()
     }
 
     private var warningLevel: Int {

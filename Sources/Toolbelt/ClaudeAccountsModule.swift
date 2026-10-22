@@ -96,18 +96,32 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     private var hotKeyIdentifiers: [UInt32] = []
     private var registeredShortcuts: [String: KeyCombo] = [:]
     var onOpenSettings: (() -> Void)?
+    var onChange: (() -> Void)?
+
+    var activeAccount: ClaudeAccountSummary? { accounts.first { $0.active } }
 
     var accounts: [ClaudeAccountSummary] { report?.accounts ?? [] }
 
     func start() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.autosaveName = "toolbelt.claude"
-        item.button?.imagePosition = .imageLeading
         menu.delegate = self
-        item.menu = menu
-        statusItem = item
+        applyStatusItemVisibility()
         refresh()
         registerTerminalShortcuts()
+    }
+
+    private func applyStatusItemVisibility() {
+        if AppSettings.shared.values.claude.showInMenuBar {
+            guard statusItem == nil else { return }
+            let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+            item.autosaveName = "toolbelt.claude"
+            item.button?.imagePosition = .imageLeading
+            item.menu = menu
+            statusItem = item
+            updateTitle()
+        } else if let statusItem {
+            NSStatusBar.system.removeStatusItem(statusItem)
+            self.statusItem = nil
+        }
     }
 
     func openTerminal(for account: String) {
@@ -140,7 +154,9 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     }
 
     func settingsDidChange() {
+        applyStatusItemVisibility()
         updateTitle()
+        onChange?()
         if registeredShortcuts != AppSettings.shared.values.claude.terminalShortcuts {
             registerTerminalShortcuts()
         }
@@ -156,6 +172,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         rebuildMenu()
         watchAccountFiles()
         scheduleResetRefresh()
+        onChange?()
     }
 
     private func watchAccountFiles() {
@@ -183,6 +200,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         guard let nextReset else { return }
         resetTimer = Timer.scheduledTimer(withTimeInterval: nextReset.timeIntervalSince(now) + 2, repeats: false) { [weak self] _ in
             self?.updateTitle()
+            self?.onChange?()
             self?.rebuildMenu()
             self?.scheduleResetRefresh()
         }
