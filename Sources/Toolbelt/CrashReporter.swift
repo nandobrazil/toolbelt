@@ -178,7 +178,7 @@ final class CrashReporter: NSObject, ObservableObject {
             .sorted { $0.occurredAt < $1.occurredAt }
     }
 
-    private static func parseCrashReport(_ url: URL) -> PendingCrash? {
+    static func parseCrashReport(_ url: URL) -> PendingCrash? {
         guard let data = try? Data(contentsOf: url),
               let newline = data.firstIndex(of: 0x0A),
               let header = try? JSONSerialization.jsonObject(with: data[..<newline]) as? [String: Any],

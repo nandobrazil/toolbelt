@@ -5,6 +5,7 @@ let package = Package(
     name: "Toolbelt",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "Toolbelt", path: "Sources/Toolbelt")
+        .executableTarget(name: "Toolbelt", path: "Sources/Toolbelt"),
+        .testTarget(name: "ToolbeltTests", dependencies: ["Toolbelt"], path: "Tests/ToolbeltTests")
     ]
 )

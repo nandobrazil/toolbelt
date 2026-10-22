@@ -1,0 +1,57 @@
+name: Compatibilidade com o macOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Sources/**
+      - Tests/**
+      - Package.swift
+      - scripts/assemble-app.sh
+      - .github/workflows/compatibility.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compatibility-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: macOS ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-14, macos-15, macos-26]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Versões
+        run: |
+          sw_vers
+          swift --version
+
+      - name: Build de release
+        run: swift build -c release
+
+      - name: Testes
+        run: swift test
+
+      - name: Abrir o app montado por 20 s
+        run: |
+          scripts/assemble-app.sh "$(swift build -c release --show-bin-path)/Toolbelt" "$RUNNER_TEMP/Toolbelt.app"
+          "$RUNNER_TEMP/Toolbelt.app/Contents/MacOS/Toolbelt" &
+          PID=$!
+          sleep 20
+          if ! kill -0 "$PID" 2>/dev/null; then
+            echo "o Toolbelt fechou sozinho antes de 20 s"
+            ls -t ~/Library/Logs/DiagnosticReports/ 2>/dev/null | head -5
+            exit 1
+          fi
+          kill -TERM "$PID"
+          wait "$PID" || true
+          tail -20 ~/Library/Logs/Toolbelt.log 2>/dev/null || true
