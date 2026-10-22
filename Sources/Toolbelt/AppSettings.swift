@@ -215,6 +215,7 @@ struct ClaudeSettings: Codable, Equatable {
     var showUsageInTitle = true
     var showNameInTitle = true
     var accountColors: [String: String] = [:]
+    var terminalShortcuts: [String: KeyCombo] = [:]
 
     init() {}
 
@@ -223,6 +224,7 @@ struct ClaudeSettings: Codable, Equatable {
         showUsageInTitle = (try? container.decodeIfPresent(Bool.self, forKey: .showUsageInTitle)) ?? true
         showNameInTitle = (try? container.decodeIfPresent(Bool.self, forKey: .showNameInTitle)) ?? true
         accountColors = (try? container.decodeIfPresent([String: String].self, forKey: .accountColors)) ?? [:]
+        terminalShortcuts = (try? container.decodeIfPresent([String: KeyCombo].self, forKey: .terminalShortcuts)) ?? [:]
     }
 
     func colorHex(for account: String) -> String {

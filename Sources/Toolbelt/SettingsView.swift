@@ -71,6 +71,7 @@ final class SettingsBridge: ObservableObject {
     var addClaudeAccount: (String) -> Void = { _ in }
     var removeClaudeAccount: (String) -> Void = { _ in }
     var useClaudeAccount: (String) -> Void = { _ in }
+    var openClaudeTerminal: (String) -> Void = { _ in }
     var clearClipboardHistory: () -> Void = {}
     var previewClipboard: () -> Void = {}
     var arrangeMenuBar: () -> Void = {}
@@ -564,7 +565,8 @@ private struct ClaudeSettingsPage: View {
                             bridge.refresh()
                         },
                         onLogin: { bridge.loginClaude(account.account) },
-                        onRemove: { accountPendingRemoval = account }
+                        onRemove: { accountPendingRemoval = account },
+                        onOpenTerminal: { bridge.openClaudeTerminal(account.account) }
                     )
                 }
                 HStack {
@@ -606,12 +608,37 @@ private struct ClaudeAccountRow: View {
     let onUse: () -> Void
     let onLogin: () -> Void
     let onRemove: () -> Void
+    let onOpenTerminal: () -> Void
     @ObservedObject var settings = AppSettings.shared
 
     @State private var alias = ""
     @FocusState private var isEditing: Bool
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            accountLine
+            if account.email != nil {
+                HStack {
+                    Button(action: onOpenTerminal) {
+                        Label("Abrir terminal com esta conta", systemImage: "terminal")
+                    }
+                    Spacer()
+                    Text("Atalho")
+                        .foregroundStyle(.secondary)
+                    ShortcutRecorder(
+                        combo: Binding(
+                            get: { settings.values.claude.terminalShortcuts[account.account] },
+                            set: { settings.values.claude.terminalShortcuts[account.account] = $0 }
+                        ),
+                        defaultCombo: nil
+                    )
+                }
+                .padding(.leading, 66)
+            }
+        }
+    }
+
+    private var accountLine: some View {
         HStack(spacing: 10) {
             ColorPicker("", selection: color, supportsOpacity: false)
                 .labelsHidden()

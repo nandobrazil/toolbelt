@@ -76,6 +76,8 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     private let menu = NSMenu()
     private var report: StatusReport?
     private var refreshTimer: Timer?
+    private var hotKeyIdentifiers: [UInt32] = []
+    private var registeredShortcuts: [String: KeyCombo] = [:]
     var onOpenSettings: (() -> Void)?
 
     var accounts: [ClaudeAccountSummary] { report?.accounts ?? [] }
@@ -91,10 +93,31 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.refresh()
         }
+        registerTerminalShortcuts()
+    }
+
+    func openTerminal(for account: String) {
+        Terminal.run("eval \"$(cca pin \(account))\" && cd ~ && clear && claude")
+    }
+
+    private func registerTerminalShortcuts() {
+        hotKeyIdentifiers.forEach(HotKeyCenter.shared.unregister)
+        hotKeyIdentifiers.removeAll()
+        registeredShortcuts = AppSettings.shared.values.claude.terminalShortcuts
+        for (account, combo) in registeredShortcuts {
+            if let identifier = HotKeyCenter.shared.register(combo, handler: { [weak self] in
+                self?.openTerminal(for: account)
+            }) {
+                hotKeyIdentifiers.append(identifier)
+            }
+        }
     }
 
     func stop() {
         refreshTimer?.invalidate()
+        hotKeyIdentifiers.forEach(HotKeyCenter.shared.unregister)
+        hotKeyIdentifiers.removeAll()
+        registeredShortcuts = [:]
         if let statusItem {
             NSStatusBar.system.removeStatusItem(statusItem)
         }
@@ -103,6 +126,9 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
 
     func settingsDidChange() {
         updateTitle()
+        if registeredShortcuts != AppSettings.shared.values.claude.terminalShortcuts {
+            registerTerminalShortcuts()
+        }
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -221,6 +247,22 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
+        let terminalItem = NSMenuItem(title: "Abrir terminal com", action: nil, keyEquivalent: "")
+        let terminalMenu = NSMenu()
+        let shortcuts = AppSettings.shared.values.claude.terminalShortcuts
+        for account in report.accounts where account.email != nil {
+            let name = account.account
+            let shortcut = shortcuts[name].map { "\t\($0.display)" } ?? ""
+            let item = ActionMenuItem(title: "\(account.shortName)\(shortcut)") { [weak self] in
+                self?.openTerminal(for: name)
+            }
+            item.image = AccountBadge.image(for: name)
+            terminalMenu.addItem(item)
+        }
+        terminalItem.submenu = terminalMenu
+        terminalItem.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: nil)
+        menu.addItem(terminalItem)
+
         if let session = report.latestSession, let cwd = session.cwd {
             menu.addItem(disabledMenuItem("Última conversa: " + (cwd as NSString).abbreviatingWithTildeInPath))
             let resumeItem = NSMenuItem(title: "Retomar última conversa em", action: nil, keyEquivalent: "")

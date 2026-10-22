@@ -79,6 +79,7 @@ final class AppController: NSObject {
         bridge.addClaudeAccount = { [weak self] alias in self?.claudeAccounts.addAccount(alias: alias) }
         bridge.removeClaudeAccount = { [weak self] account in self?.claudeAccounts.remove(account) }
         bridge.useClaudeAccount = { [weak self] account in self?.claudeAccounts.use(account) }
+        bridge.openClaudeTerminal = { [weak self] account in self?.claudeAccounts.openTerminal(for: account) }
         claudeAccounts.onOpenSettings = { [weak self] in self?.openSettings(section: .claude) }
         bridge.clearClipboardHistory = { [weak self] in self?.clipboard.clearHistory() }
         bridge.previewClipboard = { [weak self] in self?.clipboard.togglePicker() }

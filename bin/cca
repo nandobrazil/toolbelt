@@ -98,6 +98,11 @@ def find_account(reference, required=True):
     return None
 
 
+def pinned_account():
+    reference = os.environ.get("CCA_ACCOUNT", "").strip()
+    return find_account(reference, required=False) if reference else None
+
+
 def active_account():
     try:
         reference = ACTIVE_FILE.read_text().strip()
@@ -167,6 +172,9 @@ def command_status(args):
     if "--json" in args:
         print(json.dumps({"active": active_account()["id"], "accounts": summaries, "latestSession": latest_session()}, ensure_ascii=False))
         return
+    pinned = pinned_account()
+    if pinned:
+        print(f"this terminal is pinned to {label(pinned)} (CCA_ACCOUNT={pinned['id']})")
     for summary in summaries:
         marker = "*" if summary["active"] else " "
         email = summary["email"] or ("not logged in" if summary["configured"] else "not set up (run: cca setup)")
@@ -284,10 +292,13 @@ def command_use(args):
     set_active(account)
     summary = account_summary(account)
     print(f"active account: {label(account)} ({summary['email'] or 'not logged in'})")
+    pinned = pinned_account()
+    if pinned and pinned["id"] != account["id"]:
+        print(f"note: this terminal stays on {label(pinned)}; run `unset CCA_ACCOUNT` to follow the active account")
 
 
 def command_dir(args):
-    account = find_account(args[0]) if args else active_account()
+    account = find_account(args[0]) if args else (pinned_account() or active_account())
     if not is_primary(account):
         print(account["dir"])
 
@@ -348,6 +359,14 @@ def command_login(args):
     sys.exit(subprocess.call(["claude", "auth", "login", *args[1:]], env=account_env(account)))
 
 
+def command_pin(args):
+    account = find_account(args[0]) if args else active_account()
+    email = account_summary(account)["email"] or ""
+    name = account.get("alias") or (email.split("@")[0] if email else label(account))
+    title = f"Claude · {name}"
+    print(f"export CCA_ACCOUNT={account['id']}; printf '\\033]1;%s\\007' '{title}'")
+
+
 def command_help(args):
     print(
         "usage:\n"
@@ -363,6 +382,7 @@ def command_help(args):
         "  cca swap [args]           switch to the next account and continue this folder's last conversation\n"
         "  cca resume [acc]          reopen the most recent conversation, in its folder\n"
         "  cca dir [acc]             print the config dir to export (empty for the primary)\n"
+        "  eval \"$(cca pin <acc>)\"   pin this terminal to an account for good\n"
         "accounts can be referenced by number or alias"
     )
 
@@ -375,6 +395,7 @@ COMMANDS = {
     "rename": command_rename,
     "use": command_use,
     "dir": command_dir,
+    "pin": command_pin,
     "swap": command_swap,
     "login": command_login,
     "resume": command_resume_latest,
