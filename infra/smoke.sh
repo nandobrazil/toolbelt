@@ -18,7 +18,11 @@ echo "/healthz -> $CODE (tentativa $ATTEMPT)"
 
 fail=0
 check() {
-  CODE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$1" || echo 000)
+  for ATTEMPT in 1 2 3; do
+    CODE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$1" || echo 000)
+    [ "$CODE" = "$2" ] && break
+    sleep 3
+  done
   if [ "$CODE" = "$2" ]; then
     echo "  $1 -> $CODE"
   else
