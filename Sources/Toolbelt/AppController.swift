@@ -128,15 +128,13 @@ final class AppController: NSObject {
     }
 
     private func updateChevronIcon() {
-        let symbolName: String
         if isRunning(menuBarOverflow) && !menuBarOverflow.isCollapsed {
-            symbolName = "chevron.right"
-        } else {
-            symbolName = settings.values.menuBar.iconStyle.symbolName(isOpen: panel.isVisible)
+            let image = NSImage(systemSymbolName: "chevron.right", accessibilityDescription: "Toolbelt")
+            image?.isTemplate = true
+            chevronItem?.button?.image = image
+            return
         }
-        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Toolbelt")
-        image?.isTemplate = true
-        chevronItem?.button?.image = image
+        chevronItem?.button?.image = settings.values.menuBar.iconStyle.image(isOpen: panel.isVisible)
     }
 
     @objc private func chevronClicked() {

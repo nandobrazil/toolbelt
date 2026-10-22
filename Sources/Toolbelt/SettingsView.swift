@@ -217,8 +217,14 @@ private struct MenuBarSettingsPage: View {
             Section("Aparência") {
                 Picker("Ícone do Toolbelt", selection: $settings.values.menuBar.iconStyle) {
                     ForEach(ChevronStyle.allCases) { style in
-                        Label(style.title, systemImage: style.symbolName(isOpen: false))
-                            .tag(style)
+                        Label {
+                            Text(style.title)
+                        } icon: {
+                            if let image = style.image(isOpen: false) {
+                                Image(nsImage: image)
+                            }
+                        }
+                        .tag(style)
                     }
                 }
                 Stepper(
@@ -678,8 +684,8 @@ private struct AboutPage: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Image(systemName: "wrench.and.screwdriver.fill")
-                .font(.system(size: 54))
+            Image(nsImage: ToolbeltIcon.image(isOpen: false, pointSize: 72))
+                .renderingMode(.template)
                 .foregroundStyle(Color.accentColor)
             Text("Toolbelt")
                 .font(.largeTitle.bold())

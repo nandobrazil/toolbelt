@@ -2,6 +2,7 @@ import AppKit
 import Combine
 
 enum ChevronStyle: String, Codable, CaseIterable, Identifiable {
+    case belt
     case chevron
     case dots
     case toolbox
@@ -10,14 +11,25 @@ enum ChevronStyle: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .belt: return "Cinto"
         case .chevron: return "Seta"
         case .dots: return "Três pontos"
         case .toolbox: return "Caixa de ferramentas"
         }
     }
 
-    func symbolName(isOpen: Bool) -> String {
+    func image(isOpen: Bool) -> NSImage? {
+        guard let symbolName = systemSymbolName(isOpen: isOpen) else {
+            return ToolbeltIcon.image(isOpen: isOpen)
+        }
+        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Toolbelt")
+        image?.isTemplate = true
+        return image
+    }
+
+    private func systemSymbolName(isOpen: Bool) -> String? {
         switch self {
+        case .belt: return nil
         case .chevron: return isOpen ? "chevron.up" : "chevron.down"
         case .dots: return isOpen ? "ellipsis.circle.fill" : "ellipsis.circle"
         case .toolbox: return isOpen ? "wrench.and.screwdriver.fill" : "wrench.and.screwdriver"
@@ -100,7 +112,7 @@ struct ClipboardPanelAppearance: Codable, Equatable {
 }
 
 struct MenuBarSettings: Codable, Equatable {
-    var iconStyle: ChevronStyle = .chevron
+    var iconStyle: ChevronStyle = .belt
     var panelColumns = 10
     var arrangeModeSeconds = 30
 
