@@ -3,9 +3,10 @@ import AppKit
 final class ClipboardModule: ToolbeltModule {
     let identifier = "clipboard"
     let title = "Área de transferência"
+    let summary = "Histórico de textos, imagens e prints, com atalho para colar."
+    let symbolName = "doc.on.clipboard"
     let requiresAccessibility = true
 
-    private static let pasteCombo = KeyCombo(keyCode: 9, modifiers: KeyCombo.option | KeyCombo.command, display: "⌥⌘V")
     private static let pasteDelay: TimeInterval = 0.05
     private static let ignoredTypes: Set<String> = [
         "org.nspasteboard.ConcealedType",
@@ -21,6 +22,12 @@ final class ClipboardModule: ToolbeltModule {
     private var lastChangeCount = NSPasteboard.general.changeCount
     private var pollTimer: Timer?
     private var hotKeyIdentifier: UInt32?
+    private var registeredShortcut: KeyCombo?
+    private var isWatchingScreenshots = false
+    private var settings: ClipboardSettings { AppSettings.shared.values.clipboard }
+    var historyCount: Int { store.entries.count }
+    var imageCount: Int { store.entries.filter { $0.kind == .image }.count }
+    var imageBytes: Int { store.imageBytes }
 
     func start() {
         store.load()
@@ -31,26 +38,53 @@ final class ClipboardModule: ToolbeltModule {
         screenshotWatcher.onScreenshot = { [weak self] url in
             self?.captureScreenshotFile(url)
         }
-        screenshotWatcher.start()
-        hotKeyIdentifier = HotKeyCenter.shared.register(Self.pasteCombo) { [weak self] in
-            self?.togglePicker()
+        applySettings()
+    }
+
+    func settingsDidChange() {
+        applySettings()
+    }
+
+    func clearHistory() {
+        store.clear()
+    }
+
+    private func applySettings() {
+        store.applyLimits()
+        if settings.captureScreenshots != isWatchingScreenshots {
+            settings.captureScreenshots ? screenshotWatcher.start() : screenshotWatcher.stop()
+            isWatchingScreenshots = settings.captureScreenshots
+        }
+        let shortcut = settings.activeShortcut
+        guard shortcut != registeredShortcut || (shortcut != nil && hotKeyIdentifier == nil) else { return }
+        if let hotKeyIdentifier {
+            HotKeyCenter.shared.unregister(hotKeyIdentifier)
+        }
+        hotKeyIdentifier = nil
+        registeredShortcut = shortcut
+        if let shortcut {
+            hotKeyIdentifier = HotKeyCenter.shared.register(shortcut) { [weak self] in
+                self?.togglePicker()
+            }
         }
     }
 
     func stop() {
         pollTimer?.invalidate()
         screenshotWatcher.stop()
+        isWatchingScreenshots = false
         picker.close()
         if let hotKeyIdentifier {
             HotKeyCenter.shared.unregister(hotKeyIdentifier)
         }
         hotKeyIdentifier = nil
+        registeredShortcut = nil
     }
 
     func menuItems() -> [NSMenuItem] {
-        let imageCount = store.entries.filter { $0.kind == .image }.count
+        let shortcut = settings.activeShortcut?.display ?? ""
         return [
-            ActionMenuItem(title: "Histórico da área de transferência\t\(Self.pasteCombo.display)") { [weak self] in
+            ActionMenuItem(title: "Histórico da área de transferência\t\(shortcut)") { [weak self] in
                 self?.togglePicker()
             },
             disabledMenuItem("     \(store.entries.count) itens, \(imageCount) imagens"),
@@ -60,7 +94,7 @@ final class ClipboardModule: ToolbeltModule {
         ]
     }
 
-    private func togglePicker() {
+    func togglePicker() {
         if picker.isVisible {
             picker.close()
             return
@@ -76,13 +110,17 @@ final class ClipboardModule: ToolbeltModule {
         lastChangeCount = pasteboard.changeCount
         let types = Set((pasteboard.types ?? []).map(\.rawValue))
         guard types.isDisjoint(with: Self.ignoredTypes) else { return }
+        if let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+           settings.ignoredBundleIdentifiers.contains(frontmost) {
+            return
+        }
 
         if let text = pasteboard.string(forType: .string),
            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             store.addText(text)
             return
         }
-        guard !types.contains(NSPasteboard.PasteboardType.fileURL.rawValue) else { return }
+        guard settings.captureCopiedImages, !types.contains(NSPasteboard.PasteboardType.fileURL.rawValue) else { return }
         if let png = pasteboard.data(forType: .png) {
             store.addImage(pngData: png)
         } else if let tiff = pasteboard.data(forType: .tiff), let png = Self.pngData(from: tiff) {
@@ -120,6 +158,7 @@ final class ClipboardModule: ToolbeltModule {
         }
         lastChangeCount = pasteboard.changeCount
         store.promote(entry)
+        guard settings.pasteAutomatically else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.pasteDelay) {
             Self.postPasteShortcut()
         }

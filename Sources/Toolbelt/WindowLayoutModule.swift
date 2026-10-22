@@ -1,11 +1,13 @@
 import AppKit
 
-enum WindowLayout: CaseIterable {
+enum WindowLayout: String, CaseIterable, Identifiable {
     case leftHalf, rightHalf, topHalf, bottomHalf
     case maximize, center
     case firstThird, centerThird, lastThird, firstTwoThirds, lastTwoThirds
     case topLeft, topRight, bottomLeft, bottomRight
     case nextDisplay, previousDisplay
+
+    var id: String { rawValue }
 
     var title: String {
         switch self {
@@ -29,27 +31,27 @@ enum WindowLayout: CaseIterable {
         }
     }
 
-    var combo: KeyCombo {
+    var defaultCombo: KeyCombo {
         let controlOption = KeyCombo.control | KeyCombo.option
         let controlOptionCommand = controlOption | KeyCombo.command
         switch self {
-        case .leftHalf: return KeyCombo(keyCode: 123, modifiers: controlOption, display: "⌃⌥←")
-        case .rightHalf: return KeyCombo(keyCode: 124, modifiers: controlOption, display: "⌃⌥→")
-        case .topHalf: return KeyCombo(keyCode: 126, modifiers: controlOption, display: "⌃⌥↑")
-        case .bottomHalf: return KeyCombo(keyCode: 125, modifiers: controlOption, display: "⌃⌥↓")
-        case .maximize: return KeyCombo(keyCode: 36, modifiers: controlOption, display: "⌃⌥↩")
-        case .center: return KeyCombo(keyCode: 8, modifiers: controlOption, display: "⌃⌥C")
-        case .firstThird: return KeyCombo(keyCode: 2, modifiers: controlOption, display: "⌃⌥D")
-        case .centerThird: return KeyCombo(keyCode: 3, modifiers: controlOption, display: "⌃⌥F")
-        case .lastThird: return KeyCombo(keyCode: 5, modifiers: controlOption, display: "⌃⌥G")
-        case .firstTwoThirds: return KeyCombo(keyCode: 14, modifiers: controlOption, display: "⌃⌥E")
-        case .lastTwoThirds: return KeyCombo(keyCode: 17, modifiers: controlOption, display: "⌃⌥T")
-        case .topLeft: return KeyCombo(keyCode: 32, modifiers: controlOption, display: "⌃⌥U")
-        case .topRight: return KeyCombo(keyCode: 34, modifiers: controlOption, display: "⌃⌥I")
-        case .bottomLeft: return KeyCombo(keyCode: 38, modifiers: controlOption, display: "⌃⌥J")
-        case .bottomRight: return KeyCombo(keyCode: 40, modifiers: controlOption, display: "⌃⌥K")
-        case .nextDisplay: return KeyCombo(keyCode: 124, modifiers: controlOptionCommand, display: "⌃⌥⌘→")
-        case .previousDisplay: return KeyCombo(keyCode: 123, modifiers: controlOptionCommand, display: "⌃⌥⌘←")
+        case .leftHalf: return KeyCombo(keyCode: 123, modifiers: controlOption)
+        case .rightHalf: return KeyCombo(keyCode: 124, modifiers: controlOption)
+        case .topHalf: return KeyCombo(keyCode: 126, modifiers: controlOption)
+        case .bottomHalf: return KeyCombo(keyCode: 125, modifiers: controlOption)
+        case .maximize: return KeyCombo(keyCode: 36, modifiers: controlOption)
+        case .center: return KeyCombo(keyCode: 8, modifiers: controlOption)
+        case .firstThird: return KeyCombo(keyCode: 2, modifiers: controlOption)
+        case .centerThird: return KeyCombo(keyCode: 3, modifiers: controlOption)
+        case .lastThird: return KeyCombo(keyCode: 5, modifiers: controlOption)
+        case .firstTwoThirds: return KeyCombo(keyCode: 14, modifiers: controlOption)
+        case .lastTwoThirds: return KeyCombo(keyCode: 17, modifiers: controlOption)
+        case .topLeft: return KeyCombo(keyCode: 32, modifiers: controlOption)
+        case .topRight: return KeyCombo(keyCode: 34, modifiers: controlOption)
+        case .bottomLeft: return KeyCombo(keyCode: 38, modifiers: controlOption)
+        case .bottomRight: return KeyCombo(keyCode: 40, modifiers: controlOption)
+        case .nextDisplay: return KeyCombo(keyCode: 124, modifiers: controlOptionCommand)
+        case .previousDisplay: return KeyCombo(keyCode: 123, modifiers: controlOptionCommand)
         }
     }
 
@@ -84,13 +86,47 @@ enum WindowLayout: CaseIterable {
 final class WindowLayoutModule: ToolbeltModule {
     let identifier = "windowLayout"
     let title = "Organizar janelas"
+    let summary = "Atalhos de teclado para metades, terços, cantos e monitores."
+    let symbolName = "rectangle.split.2x1"
     let requiresAccessibility = true
 
     private var hotKeyIdentifiers: [UInt32] = []
+    private var registeredSettings: WindowSettings?
+    private var settings: WindowSettings { AppSettings.shared.values.windows }
 
     func start() {
+        registerHotKeys()
+    }
+
+    func stop() {
+        unregisterHotKeys()
+    }
+
+    func settingsDidChange() {
+        guard registeredSettings != settings else { return }
+        unregisterHotKeys()
+        registerHotKeys()
+    }
+
+    func menuItems() -> [NSMenuItem] {
+        let item = NSMenuItem(title: "Organizar janela", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
         for layout in WindowLayout.allCases {
-            if let identifier = HotKeyCenter.shared.register(layout.combo, handler: { [weak self] in
+            let shortcut = settings.shortcut(for: layout)?.display ?? ""
+            submenu.addItem(ActionMenuItem(title: "\(layout.title)\t\(shortcut)") { [weak self] in
+                self?.apply(layout)
+            })
+        }
+        item.submenu = submenu
+        return [item]
+    }
+
+    private func registerHotKeys() {
+        let current = settings
+        registeredSettings = current
+        for layout in WindowLayout.allCases {
+            guard let combo = current.shortcut(for: layout) else { continue }
+            if let identifier = HotKeyCenter.shared.register(combo, handler: { [weak self] in
                 self?.apply(layout)
             }) {
                 hotKeyIdentifiers.append(identifier)
@@ -98,21 +134,10 @@ final class WindowLayoutModule: ToolbeltModule {
         }
     }
 
-    func stop() {
+    private func unregisterHotKeys() {
         hotKeyIdentifiers.forEach(HotKeyCenter.shared.unregister)
         hotKeyIdentifiers.removeAll()
-    }
-
-    func menuItems() -> [NSMenuItem] {
-        let item = NSMenuItem(title: "Atalhos de janela", action: nil, keyEquivalent: "")
-        let submenu = NSMenu()
-        for layout in WindowLayout.allCases {
-            submenu.addItem(ActionMenuItem(title: "\(layout.title)\t\(layout.combo.display)") { [weak self] in
-                self?.apply(layout)
-            })
-        }
-        item.submenu = submenu
-        return [item]
+        registeredSettings = nil
     }
 
     private func apply(_ layout: WindowLayout) {
@@ -141,7 +166,10 @@ final class WindowLayoutModule: ToolbeltModule {
                 height: height
             ))
         default:
-            window.setFrame(layout.frame(for: windowFrame, in: currentScreen.visibleFrame))
+            let gap = CGFloat(settings.gap)
+            let area = currentScreen.visibleFrame.insetBy(dx: gap / 2, dy: gap / 2)
+            let target = layout.frame(for: windowFrame, in: area)
+            window.setFrame(layout == .center ? target : target.insetBy(dx: gap / 2, dy: gap / 2))
         }
     }
 

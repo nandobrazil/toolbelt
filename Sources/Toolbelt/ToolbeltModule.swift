@@ -3,14 +3,18 @@ import AppKit
 protocol ToolbeltModule: AnyObject {
     var identifier: String { get }
     var title: String { get }
+    var summary: String { get }
+    var symbolName: String { get }
     var requiresAccessibility: Bool { get }
     func start()
     func stop()
+    func settingsDidChange()
     func menuItems() -> [NSMenuItem]
 }
 
 extension ToolbeltModule {
     var requiresAccessibility: Bool { false }
+    func settingsDidChange() {}
     func menuItems() -> [NSMenuItem] { [] }
 }
 

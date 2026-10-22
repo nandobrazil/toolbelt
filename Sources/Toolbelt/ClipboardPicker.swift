@@ -135,6 +135,9 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
         let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
         let bounds = screen?.visibleFrame ?? .zero
         var origin = NSPoint(x: mouse.x, y: mouse.y - height)
+        if AppSettings.shared.values.clipboard.pickerPosition == .screenCenter {
+            origin = NSPoint(x: bounds.midX - Self.width / 2, y: bounds.midY - height / 2 + bounds.height / 8)
+        }
         origin.x = max(bounds.minX + 8, min(origin.x, bounds.maxX - Self.width - 8))
         origin.y = max(bounds.minY + 8, min(origin.y, bounds.maxY - height - 8))
         panel.setFrame(NSRect(x: origin.x, y: origin.y, width: Self.width, height: height), display: true)
@@ -154,7 +157,7 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
 
     private func updateQueryLabel() {
         queryLabel.stringValue = query.isEmpty
-            ? "Histórico · digite para filtrar · 1–9 e 0 colam direto"
+            ? "Histórico · digite para filtrar · 1–9 e 0 \(AppSettings.shared.values.clipboard.pasteAutomatically ? "colam" : "copiam") direto"
             : "Filtro: \(query)"
     }
 

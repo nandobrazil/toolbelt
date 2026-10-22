@@ -29,6 +29,8 @@ private struct StatusReport: Decodable {
 final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     let identifier = "claudeAccounts"
     let title = "Contas do Claude"
+    let summary = "Alterna entre duas contas do Claude Code e mostra o uso de cada uma."
+    let symbolName = "person.2.circle"
 
     private let accountsCommand = NSString(string: "~/.local/bin/cca").expandingTildeInPath
     private var statusItem: NSStatusItem?
@@ -54,6 +56,28 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
             NSStatusBar.system.removeStatusItem(statusItem)
         }
         statusItem = nil
+    }
+
+    func settingsDidChange() {
+        updateTitle()
+    }
+
+    func accountEmails() -> [String: String] {
+        var emails: [String: String] = [:]
+        for account in report?.accounts ?? [] {
+            emails[account.account] = account.email ?? ""
+        }
+        return emails
+    }
+
+    func switchAccount() {
+        let active = report?.active ?? "a"
+        runAccountsCommand(["use", active == "a" ? "b" : "a"])
+        refresh()
+    }
+
+    func login(_ account: String) {
+        Terminal.run("cca setup >/dev/null && cca login \(account)")
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -95,8 +119,11 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
             statusItem?.button?.title = "✳︎ ?"
             return
         }
-        let usage = active.fiveHour.percent.map { " \($0)%" } ?? ""
-        statusItem?.button?.title = "✳︎ \(active.account.uppercased())\(usage)"
+        let settings = AppSettings.shared.values.claude
+        let usage = settings.showUsageInTitle ? (active.fiveHour.percent.map { " \($0)%" } ?? "") : ""
+        let customName = settings.accountNames[active.account]?.trimmingCharacters(in: .whitespaces) ?? ""
+        let name = customName.isEmpty ? active.account.uppercased() : customName
+        statusItem?.button?.title = "✳︎ \(name)\(usage)"
     }
 
     private func rebuildMenu() {
@@ -123,7 +150,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         }
         for account in report.accounts {
             let name = account.account
-            let item = ActionMenuItem(title: "Retomar última conversa na conta \(name.uppercased())") { [weak self] in
+            let item = ActionMenuItem(title: "Retomar última conversa em \(AppSettings.shared.values.claude.displayName(for: name))") { [weak self] in
                 self?.runAccountsCommand(["use", name])
                 Terminal.run("cca resume \(name)")
                 self?.refresh()
@@ -137,7 +164,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
             menu.addItem(.separator())
             for account in missingLogins {
                 let name = account.account
-                menu.addItem(ActionMenuItem(title: "Entrar na conta \(name.uppercased())…") {
+                menu.addItem(ActionMenuItem(title: "Entrar em \(AppSettings.shared.values.claude.displayName(for: name))…") {
                     Terminal.run("cca setup >/dev/null && cca login \(name)")
                 })
             }
@@ -146,7 +173,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
 
     private func accountTitle(_ account: AccountSummary) -> String {
         let label = account.email ?? (account.configured ? "sem login" : "não configurada")
-        return "Conta \(account.account.uppercased()) · \(label)"
+        return "\(AppSettings.shared.values.claude.displayName(for: account.account)) · \(label)"
     }
 
     private func usageLine(_ account: AccountSummary) -> String {

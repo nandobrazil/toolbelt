@@ -20,8 +20,6 @@ struct ClipboardEntry: Codable, Equatable {
 }
 
 final class ClipboardStore {
-    private static let historyLimit = 40
-    private static let imageLimit = 20
 
     private let directory = AppPaths.support
     private lazy var imagesDirectory: URL = {
@@ -94,21 +92,39 @@ final class ClipboardStore {
         return image
     }
 
-    private func insert(_ entry: ClipboardEntry) {
-        entries.insert(entry, at: 0)
-        while entries.count > Self.historyLimit {
+    func applyLimits() {
+        let limits = AppSettings.shared.values.clipboard
+        var changed = false
+        while entries.count > max(limits.historyLimit, 1) {
             let removed = entries.removeLast()
             deleteImageFile(removed)
             thumbnailCache[removed.id] = nil
+            changed = true
         }
         let imageEntries = entries.filter { $0.kind == .image }
-        for removed in imageEntries.dropFirst(Self.imageLimit) {
+        for removed in imageEntries.dropFirst(max(limits.imageLimit, 0)) {
             entries.removeAll { $0.id == removed.id }
             deleteImageFile(removed)
             thumbnailCache[removed.id] = nil
+            changed = true
         }
+        if changed {
+            save()
+        }
+    }
+
+    var imageBytes: Int {
+        entries.compactMap(imageURL).reduce(0) { total, url in
+            total + ((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+        }
+    }
+
+    private func insert(_ entry: ClipboardEntry) {
+        entries.insert(entry, at: 0)
+        applyLimits()
         save()
     }
+
 
     private func deleteImageFile(_ entry: ClipboardEntry) {
         guard let url = imageURL(for: entry) else { return }
@@ -123,7 +139,7 @@ final class ClipboardStore {
         let legacyURL = directory.appendingPathComponent("clipboard-history.json")
         guard let data = try? Data(contentsOf: legacyURL),
               let texts = try? JSONDecoder().decode([String].self, from: data) else { return }
-        entries = texts.prefix(Self.historyLimit).map(ClipboardEntry.text)
+        entries = texts.prefix(AppSettings.shared.values.clipboard.historyLimit).map(ClipboardEntry.text)
         save()
         try? FileManager.default.removeItem(at: legacyURL)
     }

@@ -3,10 +3,11 @@ import AppKit
 final class MenuBarOverflowModule: ToolbeltModule {
     let identifier = "menuBarOverflow"
     let title = "Esconder ícones da barra"
+    let summary = "Esconde ícones da barra e mostra todos num painel abaixo da setinha."
+    let symbolName = "menubar.arrow.up.rectangle"
     let requiresAccessibility = true
 
     private static let collapsedLength: CGFloat = 10_000
-    private static let arrangeModeDelay: TimeInterval = 30
     private static let revealSettleDelay: TimeInterval = 0.6
     private static let popupPollInterval: TimeInterval = 0.3
     private static let popupDetectionWindow: TimeInterval = 3
@@ -15,9 +16,7 @@ final class MenuBarOverflowModule: ToolbeltModule {
     private var separatorItem: NSStatusItem?
     private var autoCollapseTimer: Timer?
     private var popupWatchTimer: Timer?
-    private let panel = HiddenItemsPanel()
     private(set) var isCollapsed = false
-    var isPanelVisible: Bool { panel.isVisible }
     var onStateChange: (() -> Void)?
 
     func start() {
@@ -29,12 +28,10 @@ final class MenuBarOverflowModule: ToolbeltModule {
         )
         item.button?.toolTip = "Arraste com ⌘ os ícones para a esquerda deste traço para escondê-los"
         separatorItem = item
-        panel.onClose = { [weak self] in self?.onStateChange?() }
         collapse()
     }
 
     func stop() {
-        panel.close()
         autoCollapseTimer?.invalidate()
         popupWatchTimer?.invalidate()
         if let separatorItem {
@@ -45,29 +42,17 @@ final class MenuBarOverflowModule: ToolbeltModule {
         onStateChange?()
     }
 
-    func togglePanel(below anchor: NSRect) {
-        if panel.isVisible {
-            panel.close()
-            return
-        }
+    func hiddenExtras() -> [MenuBarExtra] {
         if !isCollapsed {
             collapse()
         }
-        guard AccessibilityPermission.isTrusted else {
-            AccessibilityPermission.requestIfNeeded()
-            return
-        }
-        panel.show(extras: MenuBarExtras.hidden(), below: anchor) { [weak self] extra in
-            self?.open(extra)
-        }
-        onStateChange?()
+        return MenuBarExtras.hidden()
     }
 
     func toggleArrangeMode() {
-        panel.close()
         if isCollapsed {
             reveal()
-            scheduleAutoCollapse(after: Self.arrangeModeDelay)
+            scheduleAutoCollapse(after: TimeInterval(AppSettings.shared.values.menuBar.arrangeModeSeconds))
         } else {
             collapse()
         }
@@ -83,6 +68,14 @@ final class MenuBarOverflowModule: ToolbeltModule {
         onStateChange?()
     }
 
+    func open(_ extra: MenuBarExtra) {
+        reveal()
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.revealSettleDelay) { [weak self] in
+            extra.press()
+            self?.collapseWhenPopupCloses(for: extra.processIdentifier)
+        }
+    }
+
     private func reveal() {
         guard let separatorItem else { return }
         autoCollapseTimer?.invalidate()
@@ -90,14 +83,6 @@ final class MenuBarOverflowModule: ToolbeltModule {
         separatorItem.button?.isHidden = false
         isCollapsed = false
         onStateChange?()
-    }
-
-    private func open(_ extra: MenuBarExtra) {
-        reveal()
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.revealSettleDelay) { [weak self] in
-            extra.press()
-            self?.collapseWhenPopupCloses(for: extra.processIdentifier)
-        }
     }
 
     private func collapseWhenPopupCloses(for processIdentifier: pid_t) {

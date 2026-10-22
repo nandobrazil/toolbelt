@@ -36,8 +36,10 @@ PLIST
 
 codesign --force --sign "$signing_identity" "$app_dir"
 
-mkdir -p "$(dirname "$launch_agent")"
-cat > "$launch_agent" <<PLIST
+support_dir="$HOME/Library/Application Support/Toolbelt"
+if [ -f "$launch_agent" ] || [ ! -d "$support_dir" ]; then
+  mkdir -p "$(dirname "$launch_agent")"
+  cat > "$launch_agent" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -51,6 +53,8 @@ cat > "$launch_agent" <<PLIST
 </dict>
 </plist>
 PLIST
-
-launchctl bootstrap "gui/$(id -u)" "$launch_agent"
+  launchctl bootstrap "gui/$(id -u)" "$launch_agent"
+else
+  open "$app_dir"
+fi
 echo "installed $app_dir"
