@@ -11,10 +11,6 @@ on:
       - .github/workflows/deploy-site.yml
   workflow_dispatch:
 
-concurrency:
-  group: toolbelt-site
-  cancel-in-progress: false
-
 permissions:
   contents: read
 
@@ -33,27 +29,54 @@ jobs:
           curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar xz gitleaks
           ./gitleaks detect --source . --redact --no-banner --exit-code 1
 
-  deploy:
-    name: Deploy na VPS
+  image:
+    name: Imagem no GHCR
     needs: [secrets]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: meta
+        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build e push
+        env:
+          IMAGE: ghcr.io/nandobrazil/toolbelt-site:${{ steps.meta.outputs.sha }}
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          if docker manifest inspect "$IMAGE" >/dev/null 2>&1; then
+            echo "$IMAGE já existe"
+            exit 0
+          fi
+          docker build --build-arg GIT_SHA="$SHA" -t "$IMAGE" .
+          docker push "$IMAGE"
+
+  deploy:
+    name: Deploy na VPS de produção
+    needs: [image]
     runs-on: [self-hosted, oconde-vps]
+    concurrency:
+      group: release-production
+      cancel-in-progress: false
+    env:
+      SHA: ${{ needs.image.outputs.sha }}
     steps:
       - uses: actions/checkout@v5
 
-      - name: Sincronizar o código
+      - name: Release atual
         run: |
-          mkdir -p /opt/toolbelt/src
-          rsync -a --delete --exclude .git "$GITHUB_WORKSPACE/" /opt/toolbelt/src/
+          echo "no ar antes: $(bash infra/running-release.sh || true)"
 
-      - name: Build e rollout
-        run: GIT_SHA="${GITHUB_SHA::7}" bash /opt/toolbelt/src/infra/deploy.sh
+      - name: Rollout
+        run: bash infra/deploy.sh "ghcr.io/nandobrazil/toolbelt-site:$SHA"
 
-      - name: Conferir no ar
-        run: |
-          for ATTEMPT in 1 2 3 4 5 6; do
-            CODE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://toolbelt.oconde.dev/healthz || echo 000)
-            [ "$CODE" = "200" ] && break
-            sleep 5
-          done
-          echo "/healthz -> $CODE"
-          [ "$CODE" = "200" ]
+      - name: Release no ar e rotas
+        run: bash infra/smoke.sh "$SHA"

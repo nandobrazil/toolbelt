@@ -2,7 +2,7 @@
 
 App de barra de menus para macOS (Swift/AppKit + SwiftUI) que junta, num único processo leve (~15 MB), o que antes eram vários utilitários: Ice/Bartender, AltTab, Flycut, Rectangle, um monitor de RAM/disco e a troca de contas do Claude Code.
 
-Código em github.com/nandobrazil/toolbelt (privado); downloads em github.com/nandobrazil/toolbelt-releases (público); landing em `site/` (https://toolbelt.oconde.dev). macOS 14+, binário universal (desenvolvido no macOS 26, MacBook Air M4 com notch).
+Código em github.com/nandobrazil/toolbelt (privado); downloads em github.com/nandobrazil/toolbelt-releases (público); landing em `site/` (https://toolbelt.oconde.dev, VPS de produção, imagem no GHCR por commit). macOS 14+, binário universal (desenvolvido no macOS 26, MacBook Air M4 com notch).
 
 ## Módulos
 

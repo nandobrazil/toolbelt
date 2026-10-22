@@ -4,7 +4,7 @@
 
 Tudo instalado em `~/Applications/Toolbelt.app` e no GitHub (`main`). Módulos ligados: barra de menus, alternar janelas, área de transferência, janelas, monitor do sistema, contas do Claude.
 
-Versão 0.2.0 preparada para distribuição: ícone do app, bundle com versão/build, `cca` e `macscan` dentro do app, hardened runtime e entitlements, login automático via `SMAppService`, atualizador (`AppUpdater`), scripts de release (Developer ID, notarização, DMG, zip, `latest.json`) e landing em https://toolbelt.oconde.dev. **Falta a primeira release**: depende do certificado Developer ID e da credencial do notarytool na máquina (passo a passo em `docs/releasing.md`).
+Versão 0.2.0 preparada para distribuição: ícone do app, bundle com versão/build, `cca` e `macscan` dentro do app, hardened runtime e entitlements, login automático via `SMAppService`, atualizador (`AppUpdater`), scripts de release (Developer ID, notarização, DMG, zip, `latest.json`) e landing em https://toolbelt.oconde.dev, no VPS de produção desde 22/10/2026 (ficou algumas horas no de dev; o namespace de lá está parado em zero réplicas esperando o OK do dono para apagar). O projeto também aparece no portfólio em https://oconde.dev/projetos/toolbelt/. **Falta a primeira release**: depende do certificado Developer ID e da credencial do notarytool na máquina (passo a passo em `docs/releasing.md`).
 
 Configuração atual do usuário: ícone "cinto", nada ao lado do cinto (`inlineInfo` vazio), ícones próprios do Claude e do monitor desligados (o usuário desligou ao ver o do Claude colado no cinto), painel com seções Claude e Sistema, alternador em ⌘⇥ (como no AltTab), miniaturas do alternador ligadas, arquivo da área de transferência desligado.
 

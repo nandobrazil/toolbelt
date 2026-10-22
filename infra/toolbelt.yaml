@@ -6,8 +6,8 @@ metadata:
     oconde.dev/title: "Toolbelt"
     oconde.dev/description: "Landing page do Toolbelt, app de barra de menus para macOS"
     oconde.dev/category: app
-    oconde.dev/repo: "~/projects/toolbelt"
-    oconde.dev/note: "Landing estática. /download e /updates/latest.json redirecionam para os assets de github.com/nandobrazil/toolbelt-releases"
+    oconde.dev/repo: "github.com/nandobrazil/toolbelt"
+    oconde.dev/note: "produção: site estático sem banco, imagem ghcr.io/nandobrazil/toolbelt-site por commit, deploy no push da main (site/, infra/, Dockerfile) e rollback pelo workflow Redeploy da landing. /download e /updates/latest.json redirecionam para os assets de github.com/nandobrazil/toolbelt-releases e são lidos pelos apps instalados. Pull secret ghcr-pull copiado de links."
 ---
 apiVersion: v1
 kind: LimitRange
@@ -17,8 +17,8 @@ metadata:
 spec:
   limits:
     - type: Container
-      defaultRequest: { cpu: 5m, memory: 8Mi }
-      default: { memory: 64Mi }
+      defaultRequest: { cpu: 5m, memory: 16Mi }
+      default: { memory: 32Mi }
 ---
 apiVersion: v1
 kind: ResourceQuota
@@ -27,7 +27,7 @@ metadata:
   namespace: toolbelt
 spec:
   hard:
-    requests.memory: 128Mi
+    requests.memory: 192Mi
     limits.memory: 256Mi
     pods: "4"
 ---
@@ -47,16 +47,31 @@ spec:
     metadata: { labels: { app: app } }
     spec:
       enableServiceLinks: false
+      priorityClassName: production
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: app
-          image: toolbelt/app:latest
-          imagePullPolicy: Never
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 8080 }]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
           readinessProbe:
-            httpGet: { path: /, port: 8080 }
+            httpGet: { path: /healthz, port: 8080 }
             periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 30
           resources:
-            requests: { cpu: 5m, memory: 8Mi }
+            requests: { cpu: 5m, memory: 32Mi }
             limits: { memory: 32Mi }
 ---
 apiVersion: v1
@@ -75,6 +90,7 @@ metadata:
   namespace: toolbelt
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: toolbelt-cloudflare-only@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
@@ -87,3 +103,34 @@ spec:
           - path: /
             pathType: Prefix
             backend: { service: { name: app, port: { number: 80 } } }
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: cloudflare-only
+  namespace: toolbelt
+spec:
+  ipAllowList:
+    sourceRange:
+      - 173.245.48.0/20
+      - 103.21.244.0/22
+      - 103.22.200.0/22
+      - 103.31.4.0/22
+      - 141.101.64.0/18
+      - 108.162.192.0/18
+      - 190.93.240.0/20
+      - 188.114.96.0/20
+      - 197.234.240.0/22
+      - 198.41.128.0/17
+      - 162.158.0.0/15
+      - 104.16.0.0/13
+      - 104.24.0.0/14
+      - 172.64.0.0/13
+      - 131.0.72.0/22
+      - 2400:cb00::/32
+      - 2606:4700::/32
+      - 2803:f800::/32
+      - 2405:b500::/32
+      - 2405:8100::/32
+      - 2a06:98c0::/29
+      - 2c0f:f248::/32

@@ -6,7 +6,7 @@ Onde cada coisa fica:
 
 | O quê | Onde |
 |---|---|
-| Landing | `site/`, servida em https://toolbelt.oconde.dev pelo VPS de dev (namespace `toolbelt`, deploy pelo workflow `deploy-site.yml` no runner `oconde-dev-toolbelt`) |
+| Landing | `site/`, servida em https://toolbelt.oconde.dev pelo VPS de produção (namespace `toolbelt`, prioridade `production`, só aceita tráfego da Cloudflare). Push em `main` mexendo na landing gera `ghcr.io/nandobrazil/toolbelt-site:<sha7>` no GitHub Actions e o runner `oconde-vps-toolbelt` publica com `infra/deploy.sh` + `infra/smoke.sh`; rollback: Actions → Redeploy da landing com o sha bom |
 | DMG, zip de atualização e `latest.json` | assets da release em https://github.com/nandobrazil/toolbelt-releases (público) |
 | `/download` e `/updates/latest.json` | redirecionamentos do nginx da landing para `releases/latest/download/...` |
 | Endereço que o app consulta | `ToolbeltUpdateFeedURL` no `Info.plist` = https://toolbelt.oconde.dev/updates/latest.json |

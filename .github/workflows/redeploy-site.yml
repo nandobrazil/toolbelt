@@ -1,0 +1,41 @@
+name: Redeploy da landing
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Commit a publicar (7 caracteres) de um deploy da landing. Para rollback, o sha da última versão boa.'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  redeploy:
+    name: Publicar ${{ inputs.sha }}
+    runs-on: [self-hosted, oconde-vps]
+    concurrency:
+      group: release-production
+      cancel-in-progress: false
+    env:
+      SHA: ${{ inputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validar o sha
+        run: |
+          echo "$SHA" | grep -Eq '^[0-9a-f]{7}$' || { echo "sha inválido: $SHA" >&2; exit 1; }
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "$SHA não está na main" >&2; exit 1; }
+
+      - name: Release atual
+        run: |
+          echo "no ar antes: $(bash infra/running-release.sh || true)"
+
+      - name: Rollout
+        run: bash infra/deploy.sh "ghcr.io/nandobrazil/toolbelt-site:$SHA"
+
+      - name: Release no ar e rotas
+        run: bash infra/smoke.sh "$SHA"
