@@ -259,12 +259,39 @@ extension NSColor {
     }
 }
 
+struct SystemMonitorSettings: Codable, Equatable {
+    var showInMenuBar = true
+    var showsMemory = true
+    var showsDisk = true
+    var showsSwap = false
+    var refreshSeconds = 15
+    var alertsEnabled = true
+    var diskWarningPercent = 10
+    var swapWarningGigabytes = 4
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = SystemMonitorSettings()
+        showInMenuBar = (try? container.decodeIfPresent(Bool.self, forKey: .showInMenuBar)) ?? defaults.showInMenuBar
+        showsMemory = (try? container.decodeIfPresent(Bool.self, forKey: .showsMemory)) ?? defaults.showsMemory
+        showsDisk = (try? container.decodeIfPresent(Bool.self, forKey: .showsDisk)) ?? defaults.showsDisk
+        showsSwap = (try? container.decodeIfPresent(Bool.self, forKey: .showsSwap)) ?? defaults.showsSwap
+        refreshSeconds = (try? container.decodeIfPresent(Int.self, forKey: .refreshSeconds)) ?? defaults.refreshSeconds
+        alertsEnabled = (try? container.decodeIfPresent(Bool.self, forKey: .alertsEnabled)) ?? defaults.alertsEnabled
+        diskWarningPercent = (try? container.decodeIfPresent(Int.self, forKey: .diskWarningPercent)) ?? defaults.diskWarningPercent
+        swapWarningGigabytes = (try? container.decodeIfPresent(Int.self, forKey: .swapWarningGigabytes)) ?? defaults.swapWarningGigabytes
+    }
+}
+
 struct SettingsValues: Codable, Equatable {
     var enabledModules: [String: Bool] = [:]
     var menuBar = MenuBarSettings()
     var clipboard = ClipboardSettings()
     var windows = WindowSettings()
     var claude = ClaudeSettings()
+    var systemMonitor = SystemMonitorSettings()
 
     init() {}
 
@@ -275,6 +302,7 @@ struct SettingsValues: Codable, Equatable {
         clipboard = (try? container.decodeIfPresent(ClipboardSettings.self, forKey: .clipboard)) ?? ClipboardSettings()
         windows = (try? container.decodeIfPresent(WindowSettings.self, forKey: .windows)) ?? WindowSettings()
         claude = (try? container.decodeIfPresent(ClaudeSettings.self, forKey: .claude)) ?? ClaudeSettings()
+        systemMonitor = (try? container.decodeIfPresent(SystemMonitorSettings.self, forKey: .systemMonitor)) ?? SystemMonitorSettings()
     }
 }
 

@@ -6,6 +6,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     case menuBar
     case clipboard
     case windows
+    case system
     case claude
     case about
 
@@ -17,6 +18,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .menuBar: return "Barra de menus"
         case .clipboard: return "Área de transferência"
         case .windows: return "Janelas"
+        case .system: return "Monitor do sistema"
         case .claude: return "Contas do Claude"
         case .about: return "Sobre"
         }
@@ -28,6 +30,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .menuBar: return "menubar.arrow.up.rectangle"
         case .clipboard: return "doc.on.clipboard"
         case .windows: return "rectangle.split.2x1"
+        case .system: return "gauge.with.dots.needle.33percent"
         case .claude: return "sparkle"
         case .about: return "info.circle"
         }
@@ -38,6 +41,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .menuBar: return "menuBarOverflow"
         case .clipboard: return "clipboard"
         case .windows: return "windowLayout"
+        case .system: return "systemMonitor"
         case .claude: return "claudeAccounts"
         case .general, .about: return nil
         }
@@ -75,6 +79,7 @@ final class SettingsBridge: ObservableObject {
     var clearClipboardHistory: () -> Void = {}
     var previewClipboard: () -> Void = {}
     var arrangeMenuBar: () -> Void = {}
+    var openSystemReport: () -> Void = {}
     var loginClaude: (String) -> Void = { _ in }
 
     func refresh() {
@@ -113,6 +118,7 @@ struct SettingsView: View {
         case .menuBar: MenuBarSettingsPage(settings: settings, bridge: bridge)
         case .clipboard: ClipboardSettingsPage(settings: settings, bridge: bridge)
         case .windows: WindowSettingsPage(settings: settings)
+        case .system: SystemMonitorSettingsPage(settings: settings, bridge: bridge)
         case .claude: ClaudeSettingsPage(settings: settings, bridge: bridge)
         case .about: AboutPage()
         }
@@ -529,6 +535,69 @@ private struct WindowSettingsPage: View {
                 Text("Atalhos")
             } footer: {
                 Text("Clique num atalho e digite a nova combinação. ⌫ desativa, ⎋ cancela.")
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct SystemMonitorSettingsPage: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var bridge: SettingsBridge
+
+    var body: some View {
+        Form {
+            ModuleToggleSection(settings: settings, section: .system, summary: "RAM, swap e disco na barra, alertas quando apertar e o relatório completo do macscan.")
+
+            Section("Na barra de menus") {
+                Toggle("Mostrar na barra", isOn: $settings.values.systemMonitor.showInMenuBar)
+                    .toggleStyle(.switch)
+                Toggle("RAM em uso (%)", isOn: $settings.values.systemMonitor.showsMemory)
+                    .toggleStyle(.switch)
+                    .disabled(!settings.values.systemMonitor.showInMenuBar)
+                Toggle("Swap em uso", isOn: $settings.values.systemMonitor.showsSwap)
+                    .toggleStyle(.switch)
+                    .disabled(!settings.values.systemMonitor.showInMenuBar)
+                Toggle("Espaço livre no disco", isOn: $settings.values.systemMonitor.showsDisk)
+                    .toggleStyle(.switch)
+                    .disabled(!settings.values.systemMonitor.showInMenuBar)
+                Picker("Atualizar a cada", selection: $settings.values.systemMonitor.refreshSeconds) {
+                    Text("5 s").tag(5)
+                    Text("15 s").tag(15)
+                    Text("30 s").tag(30)
+                    Text("1 min").tag(60)
+                }
+            }
+
+            Section {
+                Toggle("Avisar quando apertar", isOn: $settings.values.systemMonitor.alertsEnabled)
+                    .toggleStyle(.switch)
+                Stepper(
+                    "Disco com menos de \(settings.values.systemMonitor.diskWarningPercent)% livre",
+                    value: $settings.values.systemMonitor.diskWarningPercent,
+                    in: 3...30
+                )
+                .disabled(!settings.values.systemMonitor.alertsEnabled)
+                Stepper(
+                    "Swap acima de \(settings.values.systemMonitor.swapWarningGigabytes) GB",
+                    value: $settings.values.systemMonitor.swapWarningGigabytes,
+                    in: 1...32
+                )
+                .disabled(!settings.values.systemMonitor.alertsEnabled)
+            } header: {
+                Text("Alertas")
+            } footer: {
+                Text("Também avisa quando a pressão de memória fica alta. Cada aviso aparece uma vez e só volta depois que a situação normalizar. O ícone fica laranja ou vermelho enquanto houver algo errado.")
+            }
+
+            Section {
+                Button("Abrir o relatório completo") {
+                    bridge.openSystemReport()
+                }
+            } header: {
+                Text("Relatório do Mac")
+            } footer: {
+                Text("Usa o macscan: bateria, armazenamento, memória, CPU, processos, segurança e rede. Roda só quando você abre, leva alguns segundos.")
             }
         }
         .formStyle(.grouped)

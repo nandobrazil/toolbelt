@@ -6,7 +6,9 @@ final class AppController: NSObject {
     private let clipboard = ClipboardModule()
     private let windowLayout = WindowLayoutModule()
     private let menuBarOverflow = MenuBarOverflowModule()
-    private lazy var modules: [ToolbeltModule] = [menuBarOverflow, clipboard, windowLayout, claudeAccounts]
+    private let systemMonitor = SystemMonitorModule()
+    private let systemReport = SystemReportWindowController()
+    private lazy var modules: [ToolbeltModule] = [menuBarOverflow, clipboard, windowLayout, systemMonitor, claudeAccounts]
 
     private let settings = AppSettings.shared
     private let panel = ToolbeltPanel()
@@ -16,6 +18,7 @@ final class AppController: NSObject {
     private var settingsSubscription: AnyCancellable?
     private static let defaultItemPositions: [String: Double] = [
         "toolbelt.claude": 340,
+        "toolbelt.system": 352,
         "toolbelt.chevron": 365,
         "toolbelt.separator": 385
     ]
@@ -54,6 +57,11 @@ final class AppController: NSObject {
         }
     }
 
+    func openSystemReport() {
+        panel.close()
+        systemReport.show()
+    }
+
     func openSettings(section: SettingsSection? = nil) {
         panel.close()
         settingsWindow.show(section: section)
@@ -81,6 +89,9 @@ final class AppController: NSObject {
         bridge.useClaudeAccount = { [weak self] account in self?.claudeAccounts.use(account) }
         bridge.openClaudeTerminal = { [weak self] account in self?.claudeAccounts.openTerminal(for: account) }
         claudeAccounts.onOpenSettings = { [weak self] in self?.openSettings(section: .claude) }
+        systemMonitor.onOpenReport = { [weak self] in self?.openSystemReport() }
+        systemMonitor.onOpenSettings = { [weak self] in self?.openSettings(section: .system) }
+        bridge.openSystemReport = { [weak self] in self?.openSystemReport() }
         bridge.clearClipboardHistory = { [weak self] in self?.clipboard.clearHistory() }
         bridge.previewClipboard = { [weak self] in self?.clipboard.togglePicker() }
         bridge.arrangeMenuBar = { [weak self] in self?.menuBarOverflow.toggleArrangeMode() }
@@ -204,6 +215,11 @@ final class AppController: NSObject {
         if isRunning(windowLayout) {
             actions.append(PanelAction(title: "Atalhos de janela", symbolName: "rectangle.split.2x1") { [weak self] in
                 self?.openSettings(section: .windows)
+            })
+        }
+        if isRunning(systemMonitor) {
+            actions.append(PanelAction(title: "Relatório do Mac (macscan)", symbolName: "gauge.with.dots.needle.33percent") { [weak self] in
+                self?.openSystemReport()
             })
         }
         if isRunning(claudeAccounts) {
