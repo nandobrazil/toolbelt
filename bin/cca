@@ -1,0 +1,400 @@
+#!/usr/bin/env python3
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+HOME = Path.home()
+PRIMARY_DIR = HOME / ".claude"
+STATE_DIR = HOME / ".config" / "claude-accounts"
+ACTIVE_FILE = STATE_DIR / "active"
+REGISTRY_FILE = STATE_DIR / "accounts.json"
+LEGACY_IDS = {"a": "1", "b": "2"}
+SHARED_ENTRIES = [
+    "projects",
+    "CLAUDE.md",
+    "settings.json",
+    "skills",
+    "plugins",
+    "agents",
+    "commands",
+    "output-styles",
+    "keybindings.json",
+    "history.jsonl",
+    "file-history",
+    "todos",
+    "plans",
+    "paste-cache",
+    "skill-drafts",
+]
+SEEDED_SETTINGS = [
+    "mcpServers",
+    "projects",
+    "githubRepoPaths",
+    "theme",
+    "hasCompletedOnboarding",
+    "lastOnboardingVersion",
+    "bypassPermissionsModeAccepted",
+    "autoUpdates",
+    "installMethod",
+    "optionAsMetaKeyInstalled",
+    "chromeExtension",
+    "claudeInChromeDefaultEnabled",
+    "hasCompletedClaudeInChromeOnboarding",
+    "hasIdeOnboardingBeenShown",
+    "deepLinkTerminal",
+]
+
+
+def fail(message):
+    print(f"cca: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def default_registry():
+    accounts = [{"id": "1", "dir": str(PRIMARY_DIR), "alias": ""}]
+    legacy_second = HOME / ".claude-b"
+    accounts.append({"id": "2", "dir": str(legacy_second if legacy_second.is_dir() else HOME / ".claude-2"), "alias": ""})
+    return {"accounts": accounts}
+
+
+def load_registry():
+    try:
+        registry = json.loads(REGISTRY_FILE.read_text())
+        if registry.get("accounts"):
+            return registry
+    except (OSError, ValueError):
+        pass
+    registry = default_registry()
+    save_registry(registry)
+    return registry
+
+
+def save_registry(registry):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    REGISTRY_FILE.write_text(json.dumps(registry, indent=2, ensure_ascii=False))
+
+
+def accounts():
+    return load_registry()["accounts"]
+
+
+def label(account):
+    return account.get("alias") or f"Conta {account['id']}"
+
+
+def is_primary(account):
+    return Path(account["dir"]) == PRIMARY_DIR
+
+
+def find_account(reference, required=True):
+    reference = LEGACY_IDS.get(reference.lower(), reference) if reference else reference
+    for account in accounts():
+        if account["id"] == reference or (account.get("alias") and account["alias"].lower() == str(reference).lower()):
+            return account
+    if required:
+        fail(f"unknown account '{reference}', see: cca status")
+    return None
+
+
+def active_account():
+    try:
+        reference = ACTIVE_FILE.read_text().strip()
+    except OSError:
+        reference = "1"
+    return find_account(reference, required=False) or accounts()[0]
+
+
+def set_active(account):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    ACTIVE_FILE.write_text(f"{account['id']}\n")
+
+
+def account_json_path(account):
+    if is_primary(account):
+        return HOME / ".claude.json"
+    return Path(account["dir"]) / ".claude.json"
+
+
+def account_env(account):
+    env = dict(os.environ)
+    env.pop("CLAUDE_CONFIG_DIR", None)
+    if not is_primary(account):
+        env["CLAUDE_CONFIG_DIR"] = account["dir"]
+    return env
+
+
+def read_json(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def account_summary(account):
+    data = read_json(account_json_path(account))
+    oauth = data.get("oauthAccount") or {}
+    usage_cache = data.get("cachedUsageUtilization") or {}
+    usage = usage_cache.get("utilization") or {}
+
+    def window(key):
+        entry = usage.get(key) or {}
+        return {"percent": entry.get("utilization"), "resetsAt": entry.get("resets_at")}
+
+    return {
+        "account": account["id"],
+        "alias": account.get("alias") or "",
+        "label": label(account),
+        "primary": is_primary(account),
+        "active": account["id"] == active_account()["id"],
+        "configDir": account["dir"],
+        "configured": Path(account["dir"]).is_dir(),
+        "email": oauth.get("emailAddress"),
+        "organization": oauth.get("organizationName"),
+        "fiveHour": window("five_hour"),
+        "sevenDay": window("seven_day"),
+        "usageFetchedAtMs": usage_cache.get("fetchedAtMs"),
+    }
+
+
+def format_percent(window):
+    return "?" if window["percent"] is None else f"{window['percent']}%"
+
+
+def command_status(args):
+    summaries = [account_summary(account) for account in accounts()]
+    if "--json" in args:
+        print(json.dumps({"active": active_account()["id"], "accounts": summaries, "latestSession": latest_session()}, ensure_ascii=False))
+        return
+    for summary in summaries:
+        marker = "*" if summary["active"] else " "
+        email = summary["email"] or ("not logged in" if summary["configured"] else "not set up (run: cca setup)")
+        print(
+            f"{marker} {summary['account']:>2}  {summary['label']:<16} {email:<36} "
+            f"5h {format_percent(summary['fiveHour']):>4}  7d {format_percent(summary['sevenDay']):>4}"
+        )
+
+
+def link_shared_entries(target_dir):
+    for entry in SHARED_ENTRIES:
+        source = PRIMARY_DIR / entry
+        target = target_dir / entry
+        if not source.exists():
+            continue
+        if target.is_symlink():
+            if Path(os.readlink(target)) == source:
+                continue
+            target.unlink()
+        elif target.exists():
+            backup = target.with_name(f"{entry}.before-cca")
+            target.rename(backup)
+            print(f"moved existing {target} to {backup}")
+        target.symlink_to(source)
+
+
+def seed_account_json(account):
+    primary = read_json(HOME / ".claude.json")
+    path = account_json_path(account)
+    current = read_json(path)
+    for key in SEEDED_SETTINGS:
+        if key in primary and key not in current:
+            current[key] = primary[key]
+    if "mcpServers" in primary:
+        current["mcpServers"] = primary["mcpServers"]
+    path.write_text(json.dumps(current, indent=2))
+
+
+def setup_account(account):
+    if is_primary(account):
+        return
+    directory = Path(account["dir"])
+    directory.mkdir(parents=True, exist_ok=True)
+    link_shared_entries(directory)
+    seed_account_json(account)
+
+
+def migrate_legacy_active():
+    try:
+        reference = ACTIVE_FILE.read_text().strip()
+    except OSError:
+        return
+    if reference in LEGACY_IDS:
+        ACTIVE_FILE.write_text(f"{LEGACY_IDS[reference]}\n")
+
+
+def command_setup(args):
+    load_registry()
+    migrate_legacy_active()
+    for account in accounts():
+        setup_account(account)
+    if not ACTIVE_FILE.exists():
+        set_active(accounts()[0])
+    print("setup done")
+
+
+def command_add(args):
+    registry = load_registry()
+    next_id = str(max(int(account["id"]) for account in registry["accounts"] if account["id"].isdigit()) + 1)
+    alias = " ".join(args).strip()
+    if alias and find_account(alias, required=False):
+        fail(f"alias '{alias}' is already used")
+    account = {"id": next_id, "dir": str(HOME / f".claude-{next_id}"), "alias": alias}
+    registry["accounts"].append(account)
+    save_registry(registry)
+    setup_account(account)
+    print(f"added account {next_id} ({label(account)}), log in with: cca login {next_id}")
+
+
+def command_remove(args):
+    if not args:
+        fail("usage: cca remove <account>")
+    account = find_account(args[0])
+    if is_primary(account):
+        fail("the primary account cannot be removed")
+    registry = load_registry()
+    registry["accounts"] = [item for item in registry["accounts"] if item["id"] != account["id"]]
+    save_registry(registry)
+    if active_account()["id"] == account["id"] or not find_account(active_account()["id"], required=False):
+        set_active(registry["accounts"][0])
+    subprocess.call(["claude", "auth", "logout"], env=account_env(account), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    print(f"removed account {account['id']}; its folder {account['dir']} was kept")
+
+
+def command_rename(args):
+    if not args:
+        fail("usage: cca rename <account> [alias]")
+    account = find_account(args[0])
+    alias = " ".join(args[1:]).strip()
+    other = find_account(alias, required=False) if alias else None
+    if other and other["id"] != account["id"]:
+        fail(f"alias '{alias}' is already used by account {other['id']}")
+    registry = load_registry()
+    for item in registry["accounts"]:
+        if item["id"] == account["id"]:
+            item["alias"] = alias
+    save_registry(registry)
+    print(f"account {account['id']} is now '{alias or label(account)}'")
+
+
+def command_use(args):
+    if not args:
+        fail("usage: cca use <account>")
+    account = find_account(args[0])
+    set_active(account)
+    summary = account_summary(account)
+    print(f"active account: {label(account)} ({summary['email'] or 'not logged in'})")
+
+
+def command_dir(args):
+    account = find_account(args[0]) if args else active_account()
+    if not is_primary(account):
+        print(account["dir"])
+
+
+def exec_claude(account, claude_args, cwd=None):
+    if not Path(account["dir"]).is_dir():
+        fail(f"account {account['id']} is not set up, run: cca setup")
+    if cwd:
+        os.chdir(cwd)
+    os.execvpe("claude", ["claude", *claude_args], account_env(account))
+
+
+def latest_session():
+    newest = None
+    for transcript in (PRIMARY_DIR / "projects").glob("*/*.jsonl"):
+        try:
+            modified = transcript.stat().st_mtime
+        except OSError:
+            continue
+        if newest is None or modified > newest[0]:
+            newest = (modified, transcript)
+    if newest is None:
+        return None
+    cwd = None
+    with newest[1].open(errors="ignore") as handle:
+        for line in handle:
+            try:
+                cwd = json.loads(line).get("cwd")
+            except ValueError:
+                continue
+            if cwd:
+                break
+    return {"sessionId": newest[1].stem, "cwd": cwd, "modifiedAt": newest[0]}
+
+
+def command_resume_latest(args):
+    account = find_account(args[0]) if args else active_account()
+    session = latest_session()
+    if not session or not session["cwd"]:
+        fail("no previous session found")
+    print(f"resuming {session['sessionId']} in {session['cwd']} with {label(account)}")
+    exec_claude(account, ["--resume", session["sessionId"], *args[1:]], cwd=session["cwd"])
+
+
+def command_swap(args):
+    all_accounts = accounts()
+    current = active_account()
+    index = next(i for i, account in enumerate(all_accounts) if account["id"] == current["id"])
+    account = all_accounts[(index + 1) % len(all_accounts)]
+    set_active(account)
+    print(f"active account: {label(account)}")
+    exec_claude(account, ["--continue", *args])
+
+
+def command_login(args):
+    account = find_account(args[0]) if args else active_account()
+    setup_account(account)
+    sys.exit(subprocess.call(["claude", "auth", "login", *args[1:]], env=account_env(account)))
+
+
+def command_help(args):
+    print(
+        "usage:\n"
+        "  cca                       show accounts and usage\n"
+        "  cca status [--json]       same as above\n"
+        "  cca setup                 prepare every account folder (shared projects, memory, skills, settings)\n"
+        "  cca add [alias]           add another account\n"
+        "  cca rename <acc> [alias]  set or clear an account alias\n"
+        "  cca remove <acc>          remove an account (not the primary)\n"
+        "  cca login [acc]           log in to an account\n"
+        "  cca use <acc>             set the account used by plain `claude`\n"
+        "  cca <acc> [args]          run claude with that account\n"
+        "  cca swap [args]           switch to the next account and continue this folder's last conversation\n"
+        "  cca resume [acc]          reopen the most recent conversation, in its folder\n"
+        "  cca dir [acc]             print the config dir to export (empty for the primary)\n"
+        "accounts can be referenced by number or alias"
+    )
+
+
+COMMANDS = {
+    "status": command_status,
+    "setup": command_setup,
+    "add": command_add,
+    "remove": command_remove,
+    "rename": command_rename,
+    "use": command_use,
+    "dir": command_dir,
+    "swap": command_swap,
+    "login": command_login,
+    "resume": command_resume_latest,
+    "help": command_help,
+    "-h": command_help,
+    "--help": command_help,
+}
+
+
+def main():
+    args = sys.argv[1:]
+    if not args:
+        command_status([])
+    elif args[0] in COMMANDS:
+        COMMANDS[args[0]](args[1:])
+    elif find_account(args[0], required=False):
+        exec_claude(find_account(args[0]), args[1:])
+    else:
+        fail(f"unknown command or account '{args[0]}', see: cca help")
+
+
+if __name__ == "__main__":
+    main()
