@@ -24,7 +24,6 @@ final class HiddenItemsPanel {
             onSelect(extra)
         }
         let size = content.fittingSize
-        NSLog("Toolbelt: panel extras=\(extras.count) size=\(size) anchor=\(anchor)")
         let screenFrame = NSScreen.screens.first { $0.frame.contains(anchor.origin) }?.frame ?? NSScreen.main?.frame ?? .zero
         var origin = NSPoint(x: anchor.maxX - size.width, y: anchor.minY - size.height - 4)
         origin.x = max(screenFrame.minX + 4, min(origin.x, screenFrame.maxX - size.width - 4))

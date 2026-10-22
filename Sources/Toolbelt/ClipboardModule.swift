@@ -91,7 +91,14 @@ final class ClipboardModule: ToolbeltModule {
     }
 
     private func captureScreenshotFile(_ url: URL) {
-        guard let data = try? Data(contentsOf: url) else { return }
+        NSLog("Toolbelt: screenshot detected at \(url.path)")
+        let data: Data
+        do {
+            data = try Data(contentsOf: url)
+        } catch {
+            NSLog("Toolbelt: cannot read screenshot: \(error.localizedDescription)")
+            return
+        }
         let png = url.pathExtension.lowercased() == "png" ? data : Self.pngData(from: data)
         if let png {
             store.addImage(pngData: png)

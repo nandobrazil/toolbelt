@@ -21,6 +21,7 @@ struct ClipboardEntry: Codable, Equatable {
 
 final class ClipboardStore {
     private static let historyLimit = 40
+    private static let imageLimit = 20
 
     private let directory = AppPaths.support
     private lazy var imagesDirectory: URL = {
@@ -57,7 +58,9 @@ final class ClipboardStore {
         }
         let fileName = "\(hash.prefix(24)).png"
         do {
-            try pngData.write(to: imagesDirectory.appendingPathComponent(fileName), options: .atomic)
+            let fileURL = imagesDirectory.appendingPathComponent(fileName)
+            try pngData.write(to: fileURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
         } catch {
             NSLog("Toolbelt: failed to store clipboard image: \(error)")
             return
@@ -95,6 +98,12 @@ final class ClipboardStore {
         entries.insert(entry, at: 0)
         while entries.count > Self.historyLimit {
             let removed = entries.removeLast()
+            deleteImageFile(removed)
+            thumbnailCache[removed.id] = nil
+        }
+        let imageEntries = entries.filter { $0.kind == .image }
+        for removed in imageEntries.dropFirst(Self.imageLimit) {
+            entries.removeAll { $0.id == removed.id }
             deleteImageFile(removed)
             thumbnailCache[removed.id] = nil
         }

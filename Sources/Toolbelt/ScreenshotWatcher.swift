@@ -1,58 +1,74 @@
 import AppKit
 
 final class ScreenshotWatcher {
-    private let query = NSMetadataQuery()
-    private var knownPaths: Set<String> = []
-    private var isPrimed = false
+    private static let screenshotAttribute = "com.apple.metadata:kMDItemIsScreenCapture"
+    private static let imageExtensions: Set<String> = ["png", "jpg", "jpeg", "heic", "tiff"]
+    private static let rescanDelay: TimeInterval = 0.4
+
+    private var source: DispatchSourceFileSystemObject?
+    private var knownNames: Set<String> = []
+    private var directory: URL?
+    private var pendingRescan: DispatchWorkItem?
     var onScreenshot: ((URL) -> Void)?
 
     func start() {
-        query.predicate = NSPredicate(format: "kMDItemIsScreenCapture == 1")
-        query.searchScopes = [NSMetadataQueryLocalComputerScope]
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(queryFinishedGathering),
-            name: .NSMetadataQueryDidFinishGathering,
-            object: query
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(queryUpdated),
-            name: .NSMetadataQueryDidUpdate,
-            object: query
-        )
-        query.start()
+        let directory = Self.screenshotDirectory()
+        self.directory = directory
+        knownNames = Set(fileNames(in: directory))
+        let descriptor = open(directory.path, O_EVTONLY)
+        guard descriptor >= 0 else {
+            NSLog("Toolbelt: cannot watch screenshot folder \(directory.path)")
+            return
+        }
+        let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: descriptor, eventMask: .write, queue: .main)
+        source.setEventHandler { [weak self] in self?.scheduleRescan() }
+        source.setCancelHandler { close(descriptor) }
+        source.resume()
+        self.source = source
+        NSLog("Toolbelt: watching screenshots in \(directory.path)")
     }
 
     func stop() {
-        query.stop()
-        NotificationCenter.default.removeObserver(self)
-        knownPaths.removeAll()
-        isPrimed = false
+        source?.cancel()
+        source = nil
+        pendingRescan?.cancel()
+        knownNames.removeAll()
     }
 
-    @objc private func queryFinishedGathering() {
-        query.disableUpdates()
-        knownPaths = Set(currentPaths())
-        isPrimed = true
-        query.enableUpdates()
+    private func scheduleRescan() {
+        pendingRescan?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.rescan() }
+        pendingRescan = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.rescanDelay, execute: work)
     }
 
-    @objc private func queryUpdated() {
-        guard isPrimed else { return }
-        query.disableUpdates()
-        let paths = currentPaths()
-        let newPaths = paths.filter { !knownPaths.contains($0) }
-        knownPaths.formUnion(newPaths)
-        query.enableUpdates()
-        for path in newPaths {
-            onScreenshot?(URL(fileURLWithPath: path))
+    private func rescan() {
+        guard let directory else { return }
+        let names = fileNames(in: directory)
+        let newNames = names.filter { !knownNames.contains($0) }
+        knownNames = Set(names)
+        for name in newNames {
+            let url = directory.appendingPathComponent(name)
+            if Self.isScreenshot(url) {
+                onScreenshot?(url)
+            }
         }
     }
 
-    private func currentPaths() -> [String] {
-        (0..<query.resultCount).compactMap { index in
-            (query.result(at: index) as? NSMetadataItem)?.value(forAttribute: NSMetadataItemPathKey) as? String
+    private func fileNames(in directory: URL) -> [String] {
+        (try? FileManager.default.contentsOfDirectory(atPath: directory.path))?.filter { !$0.hasPrefix(".") } ?? []
+    }
+
+    private static func isScreenshot(_ url: URL) -> Bool {
+        guard imageExtensions.contains(url.pathExtension.lowercased()) else { return false }
+        return getxattr(url.path, screenshotAttribute, nil, 0, 0, 0) >= 0
+    }
+
+    private static func screenshotDirectory() -> URL {
+        let configured = UserDefaults(suiteName: "com.apple.screencapture")?.string(forKey: "location")
+        if let configured, !configured.isEmpty {
+            return URL(fileURLWithPath: NSString(string: configured).expandingTildeInPath, isDirectory: true)
         }
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true)
     }
 }
