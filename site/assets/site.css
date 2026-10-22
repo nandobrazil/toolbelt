@@ -272,6 +272,28 @@ code {
   width: var(--clock-width);
 }
 
+html[lang="en"] {
+  --clock-width: 9.75rem;
+}
+
+.status-item--language {
+  justify-content: center;
+  min-width: 1.85rem;
+  height: 1.2rem;
+  padding: 0 0.3rem;
+  border: 1.25px solid currentColor;
+  border-radius: 0.3rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.status-item--language:hover,
+.status-item--language:focus-visible {
+  background: var(--ui-hover);
+}
+
 .account-badge {
   display: inline-grid;
   place-items: center;
