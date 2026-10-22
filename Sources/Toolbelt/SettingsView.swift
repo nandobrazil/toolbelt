@@ -692,8 +692,8 @@ private struct ClaudeAccountRow: View {
 
     private var subtitle: String {
         guard let email = account.email else { return "sem login" }
-        let fiveHour = account.fiveHour.percent.map { "\($0)%" } ?? "?"
-        let sevenDay = account.sevenDay.percent.map { "\($0)%" } ?? "?"
+        let fiveHour = account.fiveHour.currentPercent.map { "\($0)%" } ?? "?"
+        let sevenDay = account.sevenDay.currentPercent.map { "\($0)%" } ?? "?"
         return "\(email) · 5h \(fiveHour) · semana \(sevenDay)"
     }
 

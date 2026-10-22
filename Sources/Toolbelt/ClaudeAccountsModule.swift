@@ -3,6 +3,17 @@ import AppKit
 struct ClaudeUsageWindow: Decodable {
     let percent: Int?
     let resetsAt: String?
+
+    var resetDate: Date? {
+        resetsAt.flatMap(ClaudeAccountsModule.parseDate)
+    }
+
+    var currentPercent: Int? {
+        if let resetDate, resetDate <= Date() {
+            return 0
+        }
+        return percent
+    }
 }
 
 struct ClaudeAccountSummary: Decodable, Identifiable {
@@ -12,12 +23,17 @@ struct ClaudeAccountSummary: Decodable, Identifiable {
     let primary: Bool
     let active: Bool
     let configured: Bool
+    let configDir: String
     let email: String?
     let fiveHour: ClaudeUsageWindow
     let sevenDay: ClaudeUsageWindow
     let usageFetchedAtMs: Double?
 
     var id: String { account }
+
+    var configFilePath: String {
+        primary ? NSString(string: "~/.claude.json").expandingTildeInPath : configDir + "/.claude.json"
+    }
 
     var shortName: String {
         if !alias.isEmpty {
@@ -75,7 +91,8 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private let menu = NSMenu()
     private var report: StatusReport?
-    private var refreshTimer: Timer?
+    private var resetTimer: Timer?
+    private var fileWatchers: [String: FileWatcher] = [:]
     private var hotKeyIdentifiers: [UInt32] = []
     private var registeredShortcuts: [String: KeyCombo] = [:]
     var onOpenSettings: (() -> Void)?
@@ -90,9 +107,6 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         item.menu = menu
         statusItem = item
         refresh()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            self?.refresh()
-        }
         registerTerminalShortcuts()
     }
 
@@ -114,7 +128,8 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     }
 
     func stop() {
-        refreshTimer?.invalidate()
+        resetTimer?.invalidate()
+        fileWatchers.removeAll()
         hotKeyIdentifiers.forEach(HotKeyCenter.shared.unregister)
         hotKeyIdentifiers.removeAll()
         registeredShortcuts = [:]
@@ -139,6 +154,38 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         report = loadReport()
         updateTitle()
         rebuildMenu()
+        watchAccountFiles()
+        scheduleResetRefresh()
+    }
+
+    private func watchAccountFiles() {
+        let stateDirectory = NSString(string: "~/.config/claude-accounts").expandingTildeInPath
+        var paths = Set([stateDirectory + "/active", stateDirectory + "/accounts.json"])
+        for account in accounts {
+            paths.insert(account.configFilePath)
+        }
+        for path in fileWatchers.keys where !paths.contains(path) {
+            fileWatchers[path] = nil
+        }
+        for path in paths where fileWatchers[path] == nil {
+            fileWatchers[path] = FileWatcher(path: path) { [weak self] in self?.refresh() }
+        }
+    }
+
+    private func scheduleResetRefresh() {
+        resetTimer?.invalidate()
+        let now = Date()
+        let nextReset = accounts
+            .flatMap { [$0.fiveHour.resetDate, $0.sevenDay.resetDate] }
+            .compactMap { $0 }
+            .filter { $0 > now }
+            .min()
+        guard let nextReset else { return }
+        resetTimer = Timer.scheduledTimer(withTimeInterval: nextReset.timeIntervalSince(now) + 2, repeats: false) { [weak self] _ in
+            self?.updateTitle()
+            self?.rebuildMenu()
+            self?.scheduleResetRefresh()
+        }
     }
 
     func use(_ account: String) {
@@ -210,7 +257,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         if settings.showNameInTitle {
             parts.append(Self.shortened(active.shortName))
         }
-        if settings.showUsageInTitle, let percent = active.fiveHour.percent {
+        if settings.showUsageInTitle, let percent = active.fiveHour.currentPercent {
             parts.append("\(percent)%")
         }
         button.title = parts.isEmpty ? "" : " " + parts.joined(separator: " · ")
@@ -293,8 +340,8 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
 
     private func usageLine(_ account: ClaudeAccountSummary) -> String {
         guard account.email != nil else { return "—" }
-        let fiveHour = account.fiveHour.percent.map { "\($0)%" } ?? "?"
-        let sevenDay = account.sevenDay.percent.map { "\($0)%" } ?? "?"
+        let fiveHour = account.fiveHour.currentPercent.map { "\($0)%" } ?? "?"
+        let sevenDay = account.sevenDay.currentPercent.map { "\($0)%" } ?? "?"
         var line = "5h \(fiveHour)\(resetSuffix(account.fiveHour.resetsAt)) · semana \(sevenDay)"
         if let fetchedAtMs = account.usageFetchedAtMs {
             line += " · \(Self.relativeAge(fetchedAtMs))"
