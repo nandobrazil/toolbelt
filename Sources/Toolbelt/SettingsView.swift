@@ -548,6 +548,7 @@ private struct WindowSettingsPage: View {
 
 private struct AppSwitcherSettingsPage: View {
     @ObservedObject var settings: AppSettings
+    @State private var screenRecordingGranted = ScreenRecordingPermission.isGranted
 
     var body: some View {
         Form {
@@ -579,8 +580,38 @@ private struct AppSwitcherSettingsPage: View {
             } footer: {
                 Text("Segure a tecla modificadora e aperte o atalho para avançar; com ⇧ volta. Solte para trocar. ⌥⇥ rápido vai direto para a janela anterior sem mostrar o painel. Setas, Enter, ⎋ e clique também funcionam.")
             }
+
+            Section {
+                Toggle("Mostrar miniaturas das janelas", isOn: Binding(
+                    get: { settings.values.appSwitcher.showsThumbnails },
+                    set: { enabled in
+                        settings.values.appSwitcher.showsThumbnails = enabled
+                        if enabled {
+                            ScreenRecordingPermission.request()
+                        }
+                    }
+                ))
+                .toggleStyle(.switch)
+                if settings.values.appSwitcher.showsThumbnails && !screenRecordingGranted {
+                    HStack {
+                        Label("Falta a permissão de Gravação de Tela", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Spacer()
+                        Button("Abrir Ajustes…") {
+                            ScreenRecordingPermission.openSettings()
+                        }
+                    }
+                }
+            } header: {
+                Text("Miniaturas")
+            } footer: {
+                Text("O painel abre na hora com os ícones e as miniaturas aparecem em seguida. Usa a permissão de Gravação de Tela só para isso; nada é gravado nem guardado.")
+            }
         }
         .formStyle(.grouped)
+        .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
+            screenRecordingGranted = ScreenRecordingPermission.isGranted
+        }
     }
 }
 

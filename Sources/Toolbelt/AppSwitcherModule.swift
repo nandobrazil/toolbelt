@@ -87,7 +87,12 @@ final class AppSwitcherModule: ToolbeltModule {
 
         let work = DispatchWorkItem { [weak self] in
             guard let self, self.isSwitching else { return }
-            self.panel.show(windows: self.windows, selectedIndex: self.selectedIndex, iconSize: CGFloat(self.settings.iconSize))
+            self.panel.show(
+                windows: self.windows,
+                selectedIndex: self.selectedIndex,
+                iconSize: CGFloat(self.settings.iconSize),
+                showsThumbnails: self.settings.showsThumbnails && ScreenRecordingPermission.isGranted
+            )
             self.watchKeys()
         }
         showWorkItem = work
@@ -178,19 +183,24 @@ final class SwitcherPanel {
     private static let tileSpacing: CGFloat = 8
     private static let padding: CGFloat = 14
 
+    private static let thumbnailTileWidth: CGFloat = 220
+    private static let thumbnailHeight: CGFloat = 130
+
     private var window: SwitcherWindow?
     private var tiles: [SwitcherTile] = []
+    private var thumbnailTask: Task<Void, Never>?
     var onSelect: ((Int) -> Void)?
 
-    func show(windows: [SwitchableWindow], selectedIndex: Int, iconSize: CGFloat) {
+    func show(windows: [SwitchableWindow], selectedIndex: Int, iconSize: CGFloat, showsThumbnails: Bool) {
         close()
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         let bounds = screen?.visibleFrame ?? .zero
-        let tileHeight = iconSize + 52
-        let maximumColumns = max(1, Int((bounds.width * 0.9 - Self.padding * 2 + Self.tileSpacing) / (Self.tileWidth + Self.tileSpacing)))
+        let tileWidth = showsThumbnails ? Self.thumbnailTileWidth : Self.tileWidth
+        let tileHeight = showsThumbnails ? Self.thumbnailHeight + 48 : iconSize + 52
+        let maximumColumns = max(1, Int((bounds.width * 0.9 - Self.padding * 2 + Self.tileSpacing) / (tileWidth + Self.tileSpacing)))
         let columns = min(windows.count, maximumColumns)
         let rows = Int(ceil(Double(windows.count) / Double(columns)))
-        let width = CGFloat(columns) * Self.tileWidth + CGFloat(columns - 1) * Self.tileSpacing + Self.padding * 2
+        let width = CGFloat(columns) * tileWidth + CGFloat(columns - 1) * Self.tileSpacing + Self.padding * 2
         let height = CGFloat(rows) * tileHeight + CGFloat(rows - 1) * Self.tileSpacing + Self.padding * 2
 
         let background = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: width, height: height))
@@ -205,12 +215,12 @@ final class SwitcherPanel {
             let column = index % columns
             let row = index / columns
             let frame = NSRect(
-                x: Self.padding + CGFloat(column) * (Self.tileWidth + Self.tileSpacing),
+                x: Self.padding + CGFloat(column) * (tileWidth + Self.tileSpacing),
                 y: height - Self.padding - CGFloat(row + 1) * tileHeight - CGFloat(row) * Self.tileSpacing,
-                width: Self.tileWidth,
+                width: tileWidth,
                 height: tileHeight
             )
-            let tile = SwitcherTile(frame: frame, window: item, iconSize: iconSize) { [weak self] in
+            let tile = SwitcherTile(frame: frame, window: item, iconSize: iconSize, thumbnailHeight: showsThumbnails ? Self.thumbnailHeight : nil) { [weak self] in
                 self?.onSelect?(index)
             }
             background.addSubview(tile)
@@ -233,6 +243,17 @@ final class SwitcherPanel {
         panel.makeKeyAndOrderFront(nil)
         window = panel
         select(selectedIndex)
+
+        if showsThumbnails {
+            let tilesByWindow = Dictionary(uniqueKeysWithValues: zip(windows.map(\.windowID), tiles))
+            let visibleWindowIDs = windows.filter { !$0.isMinimized }.map(\.windowID)
+            thumbnailTask = WindowThumbnails.capture(
+                windowIDs: visibleWindowIDs,
+                maximumSize: CGSize(width: tileWidth - 16, height: Self.thumbnailHeight)
+            ) { identifier, image in
+                tilesByWindow[identifier]?.thumbnail = image
+            }
+        }
     }
 
     func select(_ index: Int) {
@@ -242,6 +263,8 @@ final class SwitcherPanel {
     }
 
     func close() {
+        thumbnailTask?.cancel()
+        thumbnailTask = nil
         window?.orderOut(nil)
         window = nil
         tiles.removeAll()
@@ -251,6 +274,21 @@ final class SwitcherPanel {
 private final class SwitcherTile: NSView {
     private let handler: () -> Void
     private let highlight = NSView()
+    private var thumbnailView: NSImageView?
+    private var iconView: NSImageView?
+    private let iconSize: CGFloat
+
+    var thumbnail: NSImage? {
+        didSet {
+            guard let thumbnailView else { return }
+            thumbnailView.image = thumbnail
+            if thumbnail != nil, let iconView {
+                let badge: CGFloat = 28
+                iconView.frame = NSRect(x: 10, y: thumbnailView.frame.minY + 4, width: badge, height: badge)
+                iconView.alphaValue = 1
+            }
+        }
+    }
 
     var isSelected = false {
         didSet {
@@ -260,8 +298,9 @@ private final class SwitcherTile: NSView {
         }
     }
 
-    init(frame: NSRect, window: SwitchableWindow, iconSize: CGFloat, handler: @escaping () -> Void) {
+    init(frame: NSRect, window: SwitchableWindow, iconSize: CGFloat, thumbnailHeight: CGFloat?, handler: @escaping () -> Void) {
         self.handler = handler
+        self.iconSize = iconSize
         super.init(frame: frame)
 
         highlight.frame = bounds
@@ -269,7 +308,25 @@ private final class SwitcherTile: NSView {
         highlight.layer?.cornerRadius = 10
         addSubview(highlight)
 
-        let iconView = NSImageView(frame: NSRect(x: (frame.width - iconSize) / 2, y: frame.height - iconSize - 8, width: iconSize, height: iconSize))
+        if let thumbnailHeight {
+            let thumbnailView = NSImageView(frame: NSRect(x: 8, y: frame.height - thumbnailHeight - 8, width: frame.width - 16, height: thumbnailHeight))
+            thumbnailView.imageScaling = .scaleProportionallyDown
+            thumbnailView.wantsLayer = true
+            thumbnailView.layer?.cornerRadius = 6
+            thumbnailView.layer?.masksToBounds = true
+            addSubview(thumbnailView)
+            self.thumbnailView = thumbnailView
+        }
+
+        let iconFrame: NSRect
+        if let thumbnailHeight {
+            let size = min(iconSize, thumbnailHeight - 20)
+            iconFrame = NSRect(x: (frame.width - size) / 2, y: frame.height - 8 - thumbnailHeight / 2 - size / 2, width: size, height: size)
+        } else {
+            iconFrame = NSRect(x: (frame.width - iconSize) / 2, y: frame.height - iconSize - 8, width: iconSize, height: iconSize)
+        }
+        let iconView = NSImageView(frame: iconFrame)
+        self.iconView = iconView
         iconView.image = window.icon
         iconView.imageScaling = .scaleProportionallyUpOrDown
         if window.isMinimized {

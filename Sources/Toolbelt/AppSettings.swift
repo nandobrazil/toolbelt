@@ -293,12 +293,14 @@ struct AppSwitcherSettings: Codable, Equatable {
     var includesMinimized = true
     var showDelayMilliseconds = 120
     var iconSize = 64
+    var showsThumbnails = false
 
     init() {}
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = AppSwitcherSettings()
+        showsThumbnails = (try? container.decodeIfPresent(Bool.self, forKey: .showsThumbnails)) ?? defaults.showsThumbnails
         shortcut = (try? container.decodeIfPresent(KeyCombo.self, forKey: .shortcut)) ?? defaults.shortcut
         isShortcutEnabled = (try? container.decodeIfPresent(Bool.self, forKey: .isShortcutEnabled)) ?? defaults.isShortcutEnabled
         includesMinimized = (try? container.decodeIfPresent(Bool.self, forKey: .includesMinimized)) ?? defaults.includesMinimized
