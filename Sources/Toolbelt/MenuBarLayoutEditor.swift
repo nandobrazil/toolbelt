@@ -1,5 +1,30 @@
 import SwiftUI
 
+struct MenuBarLayoutPanel: View {
+    @ObservedObject var bridge: SettingsBridge
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("O que fica na barra")
+                .font(.headline)
+            MenuBarLayoutEditor(bridge: bridge)
+            Text("Arraste um ícone entre as faixas ou para antes de outro, ou use o clique direito nele. O Toolbelt move o ícone de verdade com um ⌘-arrastar na barra (o cursor some por meio segundo) e confere se ele chegou. Relógio e Central de Controle são fixos no macOS; \(Image(systemName: "eye.slash")) marca o que fica atrás do notch.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.primary.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.primary.opacity(0.08))
+        )
+    }
+}
+
 struct MenuBarLayoutEditor: View {
     @ObservedObject var bridge: SettingsBridge
 
@@ -14,6 +39,7 @@ struct MenuBarLayoutEditor: View {
                     symbolName: "menubar.rectangle",
                     items: bridge.menuBarLayout.visible,
                     endTarget: .endOfVisible,
+                    oppositeAction: ("Esconder no cinto", .endOfHidden),
                     onDrop: bridge.requestMenuBarMove
                 )
                 MenuBarLayoutRow(
@@ -21,6 +47,7 @@ struct MenuBarLayoutEditor: View {
                     symbolName: "eye.slash",
                     items: bridge.menuBarLayout.hidden,
                     endTarget: .endOfHidden,
+                    oppositeAction: ("Mostrar na barra", .endOfVisible),
                     onDrop: bridge.requestMenuBarMove
                 )
             }
@@ -51,6 +78,7 @@ private struct MenuBarLayoutRow: View {
     let symbolName: String
     let items: [MenuBarLayoutItem]
     let endTarget: MenuBarLayoutTarget
+    let oppositeAction: (title: String, target: MenuBarLayoutTarget)
     let onDrop: (String, MenuBarLayoutTarget) -> Void
 
     @State private var isTargeted = false
@@ -64,6 +92,18 @@ private struct MenuBarLayoutRow: View {
                 ForEach(items) { item in
                     MenuBarChip(item: item) { identifier in
                         onDrop(identifier, .before(item.id))
+                    }
+                    .contextMenu {
+                        if item.isMovable {
+                            Button(oppositeAction.title) {
+                                onDrop(item.id, oppositeAction.target)
+                            }
+                            Button("Mover para o fim desta faixa") {
+                                onDrop(item.id, endTarget)
+                            }
+                        } else {
+                            Text("O macOS não deixa mover este ícone")
+                        }
                     }
                 }
                 if items.isEmpty {
@@ -136,6 +176,7 @@ private struct MenuBarChip: View {
         .font(.callout)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
+        .contentShape(RoundedRectangle(cornerRadius: 6))
         .background(
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color(nsColor: .controlBackgroundColor))

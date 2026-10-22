@@ -252,18 +252,19 @@ private struct MenuBarSettingsPage: View {
     @ObservedObject var bridge: SettingsBridge
 
     var body: some View {
+        VStack(spacing: 0) {
+            if settings.isModuleEnabled("menuBarOverflow") {
+                MenuBarLayoutPanel(bridge: bridge)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+            }
+            menuBarForm
+        }
+    }
+
+    private var menuBarForm: some View {
         Form {
             ModuleToggleSection(settings: settings, section: .menuBar, summary: "Esconde ícones da barra e mostra todos num painel abaixo da setinha.")
-
-            if settings.isModuleEnabled("menuBarOverflow") {
-                Section {
-                    MenuBarLayoutEditor(bridge: bridge)
-                } header: {
-                    Text("O que fica na barra")
-                } footer: {
-                    Text("Arraste um ícone entre as faixas ou para antes de outro. O Toolbelt move o ícone de verdade fazendo um ⌘-arrastar na barra, com o cursor escondido por meio segundo, e confere se ele chegou. O relógio e a Central de Controle são fixos no macOS. \(Image(systemName: "eye.slash")) marca ícones que ficam atrás do notch.")
-                }
-            }
 
             Section {
                 ForEach(InlineInfo.allCases) { info in
