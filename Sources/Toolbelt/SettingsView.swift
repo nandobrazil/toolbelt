@@ -9,6 +9,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     case windows
     case system
     case claude
+    case support
     case about
 
     var id: String { rawValue }
@@ -22,6 +23,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .windows: return "Janelas"
         case .system: return "Monitor do sistema"
         case .claude: return "Contas do Claude"
+        case .support: return "Ajuda e relatórios"
         case .about: return "Sobre"
         }
     }
@@ -35,6 +37,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .windows: return "rectangle.split.2x1"
         case .system: return "gauge.with.dots.needle.33percent"
         case .claude: return "sparkle"
+        case .support: return "lifepreserver"
         case .about: return "info.circle"
         }
     }
@@ -47,7 +50,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .windows: return "windowLayout"
         case .system: return "systemMonitor"
         case .claude: return "claudeAccounts"
-        case .general, .about: return nil
+        case .general, .support, .about: return nil
         }
     }
 }
@@ -89,6 +92,7 @@ final class SettingsBridge: ObservableObject {
     var openSystemReport: () -> Void = {}
     var loginClaude: (String) -> Void = { _ in }
     var loadMenuBarLayout: () -> MenuBarLayout = { MenuBarLayout() }
+    var openFeedback: (FeedbackKind) -> Void = { _ in }
     var moveMenuBarItem: (String, MenuBarLayoutTarget, @escaping (MenuBarMoveOutcome) -> Void) -> Void = { _, _, completion in
         completion(.unchanged)
     }
@@ -151,6 +155,7 @@ struct SettingsView: View {
         case .windows: WindowSettingsPage(settings: settings)
         case .system: SystemMonitorSettingsPage(settings: settings, bridge: bridge)
         case .claude: ClaudeSettingsPage(settings: settings, bridge: bridge)
+        case .support: SupportSettingsPage(settings: settings, bridge: bridge, reporter: CrashReporter.shared)
         case .about: AboutPage()
         }
     }
@@ -1015,6 +1020,65 @@ private struct UpdateSettingsSection: View {
             Label(message, systemImage: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
         }
+    }
+}
+
+private struct SupportSettingsPage: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var bridge: SettingsBridge
+    @ObservedObject var reporter: CrashReporter
+
+    var body: some View {
+        Form {
+            Section {
+                Button {
+                    bridge.openFeedback(.bug)
+                } label: {
+                    Label("Relatar um problema…", systemImage: "ladybug")
+                }
+                Button {
+                    bridge.openFeedback(.suggestion)
+                } label: {
+                    Label("Enviar uma sugestão…", systemImage: "lightbulb")
+                }
+            } header: {
+                Text("Falar com o desenvolvedor")
+            } footer: {
+                Text("Vai direto para o desenvolvedor, com uma prévia exata do que é enviado. O e-mail é opcional, só se você quiser resposta.")
+            }
+
+            Section {
+                Picker("Relatórios de falha", selection: $settings.values.reports.crashReportMode) {
+                    ForEach(CrashReportMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                if !reporter.pending.isEmpty {
+                    HStack {
+                        Label("\(reporter.pending.count) relatório(s) esperando sua decisão", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Spacer()
+                        Button("Descartar") { reporter.dismissPending() }
+                        Button("Enviar") { reporter.sendPending(rememberChoice: false) }
+                            .buttonStyle(.borderedProminent)
+                    }
+                }
+            } header: {
+                Text("Falhas e travamentos")
+            } footer: {
+                Text("Quando o Toolbelt fecha ou trava, o macOS guarda um relatório técnico. Com a sua permissão, ele vai para o desenvolvedor: tipo do erro, onde falhou, versão do app e do macOS e o modelo do Mac. Nunca o que você copia, abre ou digita. Com \"Enviar automaticamente\", avisos de erro do próprio app também vão junto.")
+            }
+
+            Section("Arquivos") {
+                Button("Abrir o log do Toolbelt") {
+                    NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Toolbelt.log"))
+                }
+                Button("Mostrar os relatórios do macOS no Finder") {
+                    NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/DiagnosticReports"))
+                }
+            }
+        }
+        .formStyle(.grouped)
     }
 }
 

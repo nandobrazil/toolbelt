@@ -21,7 +21,8 @@ for _ in $(seq 50); do
   sleep 0.1
 done
 
-scripts/assemble-app.sh "$(swift build -c release --show-bin-path)/Toolbelt" "$app_dir"
+radar_key="$(security find-generic-password -s "Toolbelt Radar key" -w 2>/dev/null || true)"
+TOOLBELT_RADAR_KEY="$radar_key" TOOLBELT_RADAR_ENVIRONMENT=development scripts/assemble-app.sh "$(swift build -c release --show-bin-path)/Toolbelt" "$app_dir"
 codesign --force --options runtime --entitlements Resources/Toolbelt.entitlements --sign "$signing_identity" "$app_dir"
 
 open "$app_dir"

@@ -10,6 +10,8 @@ final class AppController: NSObject {
     private let appSwitcher = AppSwitcherModule()
     private let systemReport = SystemReportWindowController()
     private let updater = AppUpdater()
+    private let crashReporter = CrashReporter.shared
+    private let feedbackWindow = FeedbackWindowController()
     private lazy var modules: [ToolbeltModule] = [menuBarOverflow, appSwitcher, clipboard, windowLayout, systemMonitor, claudeAccounts]
 
     private let settings = AppSettings.shared
@@ -47,6 +49,13 @@ final class AppController: NSObject {
         updater.onChange = { [weak self] in self?.updateChevronIcon() }
         updater.onOpenSettings = { [weak self] in self?.openSettings(section: .general) }
         updater.start()
+        crashReporter.onChange = { [weak self] in self?.updateChevronIcon() }
+        crashReporter.onOpenSettings = { [weak self] in self?.openSettings(section: .support) }
+        feedbackWindow.enabledModules = { [weak self] in
+            guard let self else { return [] }
+            return self.modules.filter { self.isRunning($0) }.map(\.identifier)
+        }
+        crashReporter.start()
 
         settingsSubscription = settings.$values
             .dropFirst()
@@ -105,6 +114,7 @@ final class AppController: NSObject {
         bridge.previewClipboard = { [weak self] in self?.clipboard.togglePicker() }
         bridge.arrangeMenuBar = { [weak self] in self?.menuBarOverflow.toggleArrangeMode() }
         bridge.loginClaude = { [weak self] account in self?.claudeAccounts.login(account) }
+        bridge.openFeedback = { [weak self] kind in self?.feedbackWindow.show(kind: kind) }
         bridge.loadMenuBarLayout = { [weak self] in
             guard let self, self.isRunning(self.menuBarOverflow) else { return MenuBarLayout() }
             return self.menuBarOverflow.layout()
@@ -137,6 +147,7 @@ final class AppController: NSObject {
             }
         }
         updater.settingsDidChange()
+        crashReporter.settingsDidChange()
         updateChevronIcon()
     }
 
@@ -171,9 +182,12 @@ final class AppController: NSObject {
             button.image = settings.values.menuBar.iconStyle.image(isOpen: panel.isVisible)
         }
         let title = NSMutableAttributedString(attributedString: inlineTitle())
+        let dotFont = NSFont.systemFont(ofSize: NSFont.systemFontSize - 3)
         if updater.availableRelease != nil {
-            let font = NSFont.systemFont(ofSize: NSFont.systemFontSize - 3)
-            title.append(NSAttributedString(string: " ●", attributes: [.font: font, .foregroundColor: NSColor.controlAccentColor]))
+            title.append(NSAttributedString(string: " ●", attributes: [.font: dotFont, .foregroundColor: NSColor.controlAccentColor]))
+        }
+        if !crashReporter.pending.isEmpty {
+            title.append(NSAttributedString(string: " ●", attributes: [.font: dotFont, .foregroundColor: NSColor.systemOrange]))
         }
         button.attributedTitle = title
     }
@@ -213,6 +227,23 @@ final class AppController: NSObject {
 
     private func panelSections() -> [NSView] {
         var sections: [NSView] = []
+        if let crashSection = PanelSections.crash(
+            pending: crashReporter.pending,
+            onSend: { [weak self] in
+                self?.panel.close()
+                self?.crashReporter.sendPending(rememberChoice: false)
+            },
+            onAlways: { [weak self] in
+                self?.panel.close()
+                self?.crashReporter.sendPending(rememberChoice: true)
+            },
+            onDismiss: { [weak self] in
+                self?.panel.close()
+                self?.crashReporter.dismissPending()
+            }
+        ) {
+            sections.append(crashSection)
+        }
         if let updateSection = PanelSections.update(state: updater.state, onInstall: { [weak self] in
             self?.panel.close()
             self?.updater.installAvailableUpdate()
@@ -281,6 +312,7 @@ final class AppController: NSObject {
             sections: panelSections(),
             quickActions: quickActions(),
             trailingActions: [
+                PanelAction(title: "Relatar um problema", symbolName: "exclamationmark.bubble") { [weak self] in self?.feedbackWindow.show(kind: .bug) },
                 PanelAction(title: "Configurações", symbolName: "gearshape") { [weak self] in self?.openSettings() },
                 PanelAction(title: "Sair do Toolbelt", symbolName: "power") { NSApp.terminate(nil) }
             ],
@@ -332,6 +364,9 @@ final class AppController: NSObject {
                 self?.openSettings(section: .general)
             })
         }
+        menu.addItem(ActionMenuItem(title: "Relatar um problema…") { [weak self] in
+            self?.feedbackWindow.show(kind: .bug)
+        })
         menu.addItem(ActionMenuItem(title: "Configurações…", keyEquivalent: ",") { [weak self] in
             self?.openSettings()
         })

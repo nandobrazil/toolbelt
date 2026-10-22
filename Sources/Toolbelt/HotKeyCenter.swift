@@ -154,6 +154,7 @@ final class HotKeyCenter {
         )
         guard status == noErr, let reference else {
             NSLog("Toolbelt: hotkey \(combo.display) not registered, status \(status)")
+            CrashReporter.shared.record("hotkey.register_failed", attrs: ["shortcut": .string(combo.display), "status": .integer(Int(status))])
             return nil
         }
         return reference

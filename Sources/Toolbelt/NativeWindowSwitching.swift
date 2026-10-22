@@ -61,6 +61,7 @@ enum NativeWindowSwitching {
         let status = setSymbolicHotKeyEnabled(hotKey, isEnabled)
         if status != .success {
             NSLog("Toolbelt: native hotkey \(hotKey) enabled=\(isEnabled) failed, status \(status.rawValue)")
+            CrashReporter.shared.record("native_switching.failed", attrs: ["hotKey": .integer(Int(hotKey)), "enabled": .bool(isEnabled), "status": .integer(Int(status.rawValue))])
         }
     }
 

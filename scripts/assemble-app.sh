@@ -12,6 +12,9 @@ app_dir="$2"
 version="$(tr -d '[:space:]' < "$project_dir/VERSION")"
 build_number="$(git -C "$project_dir" rev-list --count HEAD)"
 feed_url="${TOOLBELT_UPDATE_FEED_URL:-https://toolbelt.oconde.dev/updates/latest.json}"
+radar_key="${TOOLBELT_RADAR_KEY:-}"
+radar_environment="${TOOLBELT_RADAR_ENVIRONMENT:-development}"
+radar_url="${TOOLBELT_RADAR_URL:-https://radar-ingest.oconde.dev/api/v1/events}"
 year="$(date +%Y)"
 
 rm -rf "$app_dir"
@@ -42,6 +45,9 @@ cat > "$app_dir/Contents/Info.plist" <<PLIST
   <key>NSHumanReadableCopyright</key><string>© $year Fernando Conde</string>
   <key>NSAppleEventsUsageDescription</key><string>Abrir o Terminal para retomar conversas e fazer login nas contas do Claude.</string>
   <key>ToolbeltUpdateFeedURL</key><string>$feed_url</string>
+  <key>RadarIngestURL</key><string>$radar_url</string>
+  <key>RadarEnvironment</key><string>$radar_environment</string>
+  <key>RadarKey</key><string>$radar_key</string>
 </dict>
 </plist>
 PLIST

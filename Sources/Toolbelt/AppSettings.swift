@@ -365,6 +365,33 @@ struct AppSwitcherSettings: Codable, Equatable {
     }
 }
 
+enum CrashReportMode: String, Codable, CaseIterable, Identifiable {
+    case ask
+    case always
+    case never
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .ask: return "Perguntar a cada falha"
+        case .always: return "Enviar automaticamente"
+        case .never: return "Nunca enviar"
+        }
+    }
+}
+
+struct ReportSettings: Codable, Equatable {
+    var crashReportMode: CrashReportMode = .ask
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        crashReportMode = (try? container.decodeIfPresent(CrashReportMode.self, forKey: .crashReportMode)) ?? .ask
+    }
+}
+
 struct UpdateSettings: Codable, Equatable {
     var checksAutomatically = true
     var notifiesWithSystemNotification = true
@@ -388,6 +415,7 @@ struct SettingsValues: Codable, Equatable {
     var systemMonitor = SystemMonitorSettings()
     var appSwitcher = AppSwitcherSettings()
     var updates = UpdateSettings()
+    var reports = ReportSettings()
 
     init() {}
 
@@ -401,6 +429,7 @@ struct SettingsValues: Codable, Equatable {
         systemMonitor = (try? container.decodeIfPresent(SystemMonitorSettings.self, forKey: .systemMonitor)) ?? SystemMonitorSettings()
         appSwitcher = (try? container.decodeIfPresent(AppSwitcherSettings.self, forKey: .appSwitcher)) ?? AppSwitcherSettings()
         updates = (try? container.decodeIfPresent(UpdateSettings.self, forKey: .updates)) ?? UpdateSettings()
+        reports = (try? container.decodeIfPresent(ReportSettings.self, forKey: .reports)) ?? ReportSettings()
     }
 }
 

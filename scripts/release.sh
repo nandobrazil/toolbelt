@@ -24,6 +24,11 @@ if ! xcrun notarytool history --keychain-profile "$notary_profile" >/dev/null 2>
   echo "notary profile '$notary_profile' not found (see docs/releasing.md)" >&2
   exit 1
 fi
+radar_key="$(security find-generic-password -s "Toolbelt Radar key" -w 2>/dev/null || true)"
+if [[ ! "$radar_key" =~ ^rk_[A-Za-z0-9]{40}$ ]]; then
+  echo "no Radar ingest key in the keychain item 'Toolbelt Radar key' (see docs/releasing.md)" >&2
+  exit 1
+fi
 if [ -n "$(git status --porcelain)" ]; then
   echo "commit or stash your changes before releasing" >&2
   exit 1
@@ -58,7 +63,7 @@ binary="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/Too
 
 rm -rf "$dist_dir"
 mkdir -p "$dist_dir"
-TOOLBELT_UPDATE_FEED_URL="${site_url%/}/updates/latest.json" scripts/assemble-app.sh "$binary" "$app"
+TOOLBELT_UPDATE_FEED_URL="${site_url%/}/updates/latest.json" TOOLBELT_RADAR_KEY="$radar_key" TOOLBELT_RADAR_ENVIRONMENT=production scripts/assemble-app.sh "$binary" "$app"
 codesign --force --options runtime --timestamp --entitlements Resources/Toolbelt.entitlements --sign "$identity" "$app"
 codesign --verify --deep --strict --verbose=2 "$app"
 

@@ -5,6 +5,8 @@ if isatty(STDERR_FILENO) == 0 {
     freopen(logPath, "a", stderr)
 }
 
+_ = Diagnostics.launchDate
+
 let arguments = CommandLine.arguments
 if let index = arguments.firstIndex(of: AppUpdater.relaunchArgument),
    arguments.indices.contains(index + 1),

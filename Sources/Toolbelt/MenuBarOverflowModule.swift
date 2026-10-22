@@ -148,6 +148,9 @@ final class MenuBarOverflowModule: ToolbeltModule {
                 DispatchQueue.main.async {
                     guard let self else { return }
                     self.isMovingItem = false
+                    if outcome.isFailure {
+                        CrashReporter.shared.record("menubar.move_failed", attrs: ["reason": .string(outcome.message)])
+                    }
                     guard wasCollapsed else {
                         completion(outcome)
                         return

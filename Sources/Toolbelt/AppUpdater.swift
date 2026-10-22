@@ -223,6 +223,7 @@ final class AppUpdater: NSObject, ObservableObject {
         switch result {
         case .failure(let failure):
             state = .failed(failure.message)
+            CrashReporter.shared.record("update.install_failed", attrs: ["reason": .string(failure.message), "target": .string(release.version)])
         case .success(let preparedApp):
             state = .installing(release)
             do {
@@ -315,55 +316,24 @@ final class AppUpdater: NSObject, ObservableObject {
     }
 
     private func configureNotifications() {
-        let center = UNUserNotificationCenter.current()
         let install = UNNotificationAction(identifier: Self.installActionIdentifier, title: "Atualizar agora", options: [])
         let category = UNNotificationCategory(identifier: Self.notificationCategory, actions: [install], intentIdentifiers: [], options: [])
-        center.setNotificationCategories([category])
-        center.delegate = self
+        NotificationRouter.shared.register(category) { [weak self] action in
+            if action == Self.installActionIdentifier {
+                self?.installAvailableUpdate()
+            } else if action == UNNotificationDefaultActionIdentifier {
+                self?.onOpenSettings?()
+            }
+        }
     }
 
     private func postNotification(for release: UpdateRelease) {
-        let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            guard granted else { return }
-            let content = UNMutableNotificationContent()
-            content.title = "Toolbelt \(release.version) disponível"
-            content.body = release.notes.first.map { "\($0) Você está na \(Self.currentVersion)." } ?? "Você está na \(Self.currentVersion). Atualize com um clique."
-            content.sound = .default
-            content.categoryIdentifier = Self.notificationCategory
-            let request = UNNotificationRequest(identifier: Self.notificationIdentifier, content: content, trigger: nil)
-            center.add(request) { error in
-                if let error {
-                    NSLog("Toolbelt: update notification failed: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-}
-
-extension AppUpdater: UNUserNotificationCenterDelegate {
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        completionHandler([.banner, .sound])
-    }
-
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
-        let isUpdate = response.notification.request.content.categoryIdentifier == Self.notificationCategory
-        let action = response.actionIdentifier
-        DispatchQueue.main.async { [weak self] in
-            if isUpdate && action == Self.installActionIdentifier {
-                self?.installAvailableUpdate()
-            } else if isUpdate && action == UNNotificationDefaultActionIdentifier {
-                self?.onOpenSettings?()
-            }
-            completionHandler()
-        }
+        let body = release.notes.first.map { "\($0) Você está na \(Self.currentVersion)." } ?? "Você está na \(Self.currentVersion). Atualize com um clique."
+        NotificationRouter.shared.post(
+            identifier: Self.notificationIdentifier,
+            title: "Toolbelt \(release.version) disponível",
+            body: body,
+            category: Self.notificationCategory
+        )
     }
 }

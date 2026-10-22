@@ -114,6 +114,45 @@ enum PanelSections {
         return stack
     }
 
+    static func crash(pending: [PendingCrash], onSend: @escaping () -> Void, onAlways: @escaping () -> Void, onDismiss: @escaping () -> Void) -> NSView? {
+        guard !pending.isEmpty else { return nil }
+        let stack = verticalStack()
+        stack.addArrangedSubview(header("Relatório de falha"))
+
+        let icon = NSImageView(image: NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: nil) ?? NSImage())
+        icon.contentTintColor = .systemOrange
+        icon.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
+        let onlyHangs = pending.allSatisfy { $0.kind == .hang }
+        let headline = pending.count > 1
+            ? "\(pending.count) falhas desde a última vez"
+            : (onlyHangs ? "O Toolbelt travou" : "O Toolbelt fechou inesperadamente")
+        let title = NSTextField(labelWithString: headline)
+        title.font = .systemFont(ofSize: 13, weight: .semibold)
+        let subtitle = NSTextField(wrappingLabelWithString: "Enviar o relatório ajuda a corrigir. Vai só o técnico: versão, macOS e onde falhou.")
+        subtitle.font = .systemFont(ofSize: 11)
+        subtitle.textColor = .secondaryLabelColor
+        subtitle.preferredMaxLayoutWidth = width - 30
+        let texts = verticalStack(spacing: 1)
+        texts.addArrangedSubview(title)
+        texts.addArrangedSubview(subtitle)
+        let line = NSStackView(views: [icon, texts])
+        line.orientation = .horizontal
+        line.alignment = .top
+        line.spacing = 8
+        stack.addArrangedSubview(line)
+
+        let buttons = NSStackView(views: [
+            TextActionButton(title: "Enviar", handler: onSend),
+            TextActionButton(title: "Sempre enviar", isProminent: false, handler: onAlways),
+            TextActionButton(title: "Agora não", isProminent: false, handler: onDismiss)
+        ])
+        buttons.orientation = .horizontal
+        buttons.spacing = 6
+        stack.addArrangedSubview(buttons)
+        stack.widthAnchor.constraint(greaterThanOrEqualToConstant: width).isActive = true
+        return stack
+    }
+
     static func system(snapshot: SystemSnapshot, onOpenReport: @escaping () -> Void) -> NSView {
         let stack = verticalStack()
         stack.addArrangedSubview(header("Sistema"))
@@ -263,13 +302,15 @@ final class HoverRow: NSView {
 final class TextActionButton: NSButton {
     private let handler: () -> Void
 
-    init(title: String, handler: @escaping () -> Void) {
+    init(title: String, isProminent: Bool = true, handler: @escaping () -> Void) {
         self.handler = handler
         super.init(frame: .zero)
         self.title = title
         bezelStyle = .push
         controlSize = .small
-        bezelColor = .controlAccentColor
+        if isProminent {
+            bezelColor = .controlAccentColor
+        }
         target = self
         action = #selector(runHandler)
     }
