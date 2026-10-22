@@ -19,6 +19,7 @@ final class ClipboardModule: ToolbeltModule {
     private let store = ClipboardStore()
     private lazy var picker = ClipboardPicker(store: store)
     private let screenshotWatcher = ScreenshotWatcher()
+    private let archive = ClipboardArchive()
     private var lastChangeCount = NSPasteboard.general.changeCount
     private var pollTimer: Timer?
     private var hotKeyIdentifier: UInt32?
@@ -110,21 +111,25 @@ final class ClipboardModule: ToolbeltModule {
         lastChangeCount = pasteboard.changeCount
         let types = Set((pasteboard.types ?? []).map(\.rawValue))
         guard types.isDisjoint(with: Self.ignoredTypes) else { return }
-        if let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+        let frontmostApplication = NSWorkspace.shared.frontmostApplication
+        if let frontmost = frontmostApplication?.bundleIdentifier,
            settings.ignoredBundleIdentifiers.contains(frontmost) {
             return
         }
+        let sourceName = frontmostApplication?.localizedName
 
         if let text = pasteboard.string(forType: .string),
            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             store.addText(text)
+            archive.appendText(text, sourceApplication: sourceName)
             return
         }
         guard settings.captureCopiedImages, !types.contains(NSPasteboard.PasteboardType.fileURL.rawValue) else { return }
-        if let png = pasteboard.data(forType: .png) {
-            store.addImage(pngData: png)
-        } else if let tiff = pasteboard.data(forType: .tiff), let png = Self.pngData(from: tiff) {
-            store.addImage(pngData: png)
+        let copiedImage = pasteboard.data(forType: .png)
+            ?? pasteboard.data(forType: .tiff).flatMap(Self.pngData(from:))
+        if let copiedImage {
+            store.addImage(pngData: copiedImage)
+            archive.appendImage(pngData: copiedImage, sourceApplication: sourceName)
         }
     }
 

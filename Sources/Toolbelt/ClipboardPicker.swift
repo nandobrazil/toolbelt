@@ -13,11 +13,12 @@ private final class PickerPanel: NSPanel {
 }
 
 final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSWindowDelegate {
-    private static let width: CGFloat = 420
-    private static let textRowHeight: CGFloat = 26
-    private static let imageRowHeight: CGFloat = 72
-    private static let maximumHeight: CGFloat = 520
     private static let headerHeight: CGFloat = 30
+    private var appearance: ClipboardPanelAppearance { AppSettings.shared.values.clipboard.appearance }
+    private var width: CGFloat { CGFloat(appearance.width) }
+    private var textRowHeight: CGFloat { CGFloat(appearance.fontSize) * 2 }
+    private var imageRowHeight: CGFloat { CGFloat(appearance.imageHeight) }
+    private var maximumHeight: CGFloat { CGFloat(appearance.maximumHeight) }
     private static let previewLength = 80
 
     private let store: ClipboardStore
@@ -43,7 +44,7 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
         guard !store.entries.isEmpty else { return }
 
         let panel = PickerPanel(
-            contentRect: NSRect(x: 0, y: 0, width: Self.width, height: 200),
+            contentRect: NSRect(x: 0, y: 0, width: width, height: 200),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -58,6 +59,11 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
         panel.delegate = self
         panel.onKeyDown = { [weak self] event in self?.handleKey(event) ?? false }
         panel.contentView = makeContent()
+        switch appearance.theme {
+        case .system: panel.appearance = nil
+        case .light: panel.appearance = NSAppearance(named: .aqua)
+        case .dark: panel.appearance = NSAppearance(named: .darkAqua)
+        }
         self.panel = panel
 
         resizeAndPosition()
@@ -78,12 +84,22 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
     }
 
     private func makeContent() -> NSView {
-        let background = NSVisualEffectView()
-        background.material = .popover
-        background.state = .active
-        background.wantsLayer = true
-        background.layer?.cornerRadius = 12
-        background.layer?.masksToBounds = true
+        let container = NSView()
+        container.wantsLayer = true
+        container.layer?.cornerRadius = CGFloat(appearance.cornerRadius)
+        container.layer?.masksToBounds = true
+
+        let backdrop = makeBackdrop()
+        backdrop.alphaValue = CGFloat(appearance.backgroundOpacity)
+        backdrop.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(backdrop)
+        NSLayoutConstraint.activate([
+            backdrop.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            backdrop.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            backdrop.topAnchor.constraint(equalTo: container.topAnchor),
+            backdrop.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
+        let background = container
 
         queryLabel.font = .systemFont(ofSize: 12, weight: .medium)
         queryLabel.textColor = .secondaryLabelColor
@@ -91,7 +107,7 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
         updateQueryLabel()
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("entry"))
-        column.width = Self.width - 16
+        column.width = width - 16
         tableView.addTableColumn(column)
         tableView.headerView = nil
         tableView.backgroundColor = .clear
@@ -125,22 +141,44 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
         return background
     }
 
+    private func makeBackdrop() -> NSView {
+        switch appearance.background {
+        case .glass:
+            let view = NSVisualEffectView()
+            view.material = .hudWindow
+            view.blendingMode = .behindWindow
+            view.state = .active
+            return view
+        case .frosted:
+            let view = NSVisualEffectView()
+            view.material = .popover
+            view.blendingMode = .behindWindow
+            view.state = .active
+            return view
+        case .solid:
+            let view = NSView()
+            view.wantsLayer = true
+            view.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+            return view
+        }
+    }
+
     private func resizeAndPosition() {
         guard let panel else { return }
         let rowsHeight = visibleEntries.reduce(CGFloat(0)) { total, entry in
             total + rowHeight(for: entry) + tableView.intercellSpacing.height
         }
-        let height = min(Self.maximumHeight, max(rowsHeight, Self.textRowHeight) + Self.headerHeight + 8)
+        let height = min(maximumHeight, max(rowsHeight, textRowHeight) + Self.headerHeight + 8)
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
         let bounds = screen?.visibleFrame ?? .zero
         var origin = NSPoint(x: mouse.x, y: mouse.y - height)
         if AppSettings.shared.values.clipboard.pickerPosition == .screenCenter {
-            origin = NSPoint(x: bounds.midX - Self.width / 2, y: bounds.midY - height / 2 + bounds.height / 8)
+            origin = NSPoint(x: bounds.midX - width / 2, y: bounds.midY - height / 2 + bounds.height / 8)
         }
-        origin.x = max(bounds.minX + 8, min(origin.x, bounds.maxX - Self.width - 8))
+        origin.x = max(bounds.minX + 8, min(origin.x, bounds.maxX - width - 8))
         origin.y = max(bounds.minY + 8, min(origin.y, bounds.maxY - height - 8))
-        panel.setFrame(NSRect(x: origin.x, y: origin.y, width: Self.width, height: height), display: true)
+        panel.setFrame(NSRect(x: origin.x, y: origin.y, width: width, height: height), display: true)
     }
 
     private func refreshEntries() {
@@ -239,14 +277,15 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
     }
 
     private func rowHeight(for entry: ClipboardEntry) -> CGFloat {
-        entry.kind == .image ? Self.imageRowHeight : Self.textRowHeight
+        entry.kind == .image ? imageRowHeight : textRowHeight
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let entry = visibleEntries[row]
         let container = NSView()
 
-        let shortcut = NSTextField(labelWithString: row < 9 ? "\(row + 1)" : (row == 9 ? "0" : ""))
+        let shortcutText = row < 9 ? "\(row + 1)" : (row == 9 ? "0" : "")
+        let shortcut = NSTextField(labelWithString: appearance.showsShortcutNumbers ? shortcutText : "")
         shortcut.font = .monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
         shortcut.textColor = .tertiaryLabelColor
         shortcut.alignment = .center
@@ -258,7 +297,7 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
         case .text:
             let label = NSTextField(labelWithString: preview(entry.text ?? ""))
             label.lineBreakMode = .byTruncatingTail
-            label.font = .systemFont(ofSize: 13)
+            label.font = .systemFont(ofSize: CGFloat(appearance.fontSize))
             content = label
         case .image:
             let imageView = NSImageView()
@@ -272,7 +311,7 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
 
         NSLayoutConstraint.activate([
             shortcut.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 4),
-            shortcut.widthAnchor.constraint(equalToConstant: 16),
+            shortcut.widthAnchor.constraint(equalToConstant: appearance.showsShortcutNumbers ? 16 : 0),
             shortcut.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             content.leadingAnchor.constraint(equalTo: shortcut.trailingAnchor, constant: 8),
             content.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8)

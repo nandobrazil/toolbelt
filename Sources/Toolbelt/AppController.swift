@@ -58,8 +58,14 @@ final class AppController: NSObject {
             guard let clipboard = self?.clipboard else { return ClipboardStats() }
             return ClipboardStats(itemCount: clipboard.historyCount, imageCount: clipboard.imageCount, imageBytes: clipboard.imageBytes)
         }
-        bridge.loadClaudeEmails = { [weak self] in self?.claudeAccounts.accountEmails() ?? [:] }
+        bridge.loadClaudeAccounts = { [weak self] in self?.claudeAccounts.accounts ?? [] }
+        bridge.renameClaudeAccount = { [weak self] account, alias in self?.claudeAccounts.rename(account, alias: alias) }
+        bridge.addClaudeAccount = { [weak self] alias in self?.claudeAccounts.addAccount(alias: alias) }
+        bridge.removeClaudeAccount = { [weak self] account in self?.claudeAccounts.remove(account) }
+        bridge.useClaudeAccount = { [weak self] account in self?.claudeAccounts.use(account) }
+        claudeAccounts.onOpenSettings = { [weak self] in self?.openSettings(section: .claude) }
         bridge.clearClipboardHistory = { [weak self] in self?.clipboard.clearHistory() }
+        bridge.previewClipboard = { [weak self] in self?.clipboard.togglePicker() }
         bridge.arrangeMenuBar = { [weak self] in self?.menuBarOverflow.toggleArrangeMode() }
         bridge.loginClaude = { [weak self] account in self?.claudeAccounts.login(account) }
     }
@@ -173,7 +179,7 @@ final class AppController: NSObject {
             })
         }
         if isRunning(claudeAccounts) {
-            actions.append(PanelAction(title: "Trocar a conta ativa do Claude", symbolName: "person.2.circle") { [weak self] in
+            actions.append(PanelAction(title: "Trocar a conta ativa do Claude", symbolName: "sparkle") { [weak self] in
                 self?.claudeAccounts.switchAccount()
             })
         }

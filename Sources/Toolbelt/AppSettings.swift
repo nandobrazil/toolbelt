@@ -39,6 +39,66 @@ enum PickerPosition: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum PanelTheme: String, Codable, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: return "Do sistema"
+        case .light: return "Claro"
+        case .dark: return "Escuro"
+        }
+    }
+}
+
+enum PanelBackground: String, Codable, CaseIterable, Identifiable {
+    case glass
+    case frosted
+    case solid
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .glass: return "Vidro transparente"
+        case .frosted: return "Fosco"
+        case .solid: return "Sólido"
+        }
+    }
+}
+
+struct ClipboardPanelAppearance: Codable, Equatable {
+    var theme: PanelTheme = .system
+    var background: PanelBackground = .frosted
+    var backgroundOpacity = 1.0
+    var width = 420.0
+    var fontSize = 13.0
+    var imageHeight = 72.0
+    var cornerRadius = 12.0
+    var maximumHeight = 520.0
+    var showsShortcutNumbers = true
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = ClipboardPanelAppearance()
+        theme = (try? container.decodeIfPresent(PanelTheme.self, forKey: .theme)) ?? defaults.theme
+        background = (try? container.decodeIfPresent(PanelBackground.self, forKey: .background)) ?? defaults.background
+        backgroundOpacity = (try? container.decodeIfPresent(Double.self, forKey: .backgroundOpacity)) ?? defaults.backgroundOpacity
+        width = (try? container.decodeIfPresent(Double.self, forKey: .width)) ?? defaults.width
+        fontSize = (try? container.decodeIfPresent(Double.self, forKey: .fontSize)) ?? defaults.fontSize
+        imageHeight = (try? container.decodeIfPresent(Double.self, forKey: .imageHeight)) ?? defaults.imageHeight
+        cornerRadius = (try? container.decodeIfPresent(Double.self, forKey: .cornerRadius)) ?? defaults.cornerRadius
+        maximumHeight = (try? container.decodeIfPresent(Double.self, forKey: .maximumHeight)) ?? defaults.maximumHeight
+        showsShortcutNumbers = (try? container.decodeIfPresent(Bool.self, forKey: .showsShortcutNumbers)) ?? defaults.showsShortcutNumbers
+    }
+}
+
 struct MenuBarSettings: Codable, Equatable {
     var iconStyle: ChevronStyle = .chevron
     var panelColumns = 10
@@ -67,6 +127,13 @@ struct ClipboardSettings: Codable, Equatable {
     var pasteAutomatically = true
     var pickerPosition: PickerPosition = .cursor
     var ignoredBundleIdentifiers: [String] = []
+    var isArchiveEnabled = false
+    var archiveFolderPath = ClipboardSettings.defaultArchiveFolderPath
+    var archiveIncludesImages = true
+    var appearance = ClipboardPanelAppearance()
+
+    static let defaultArchiveFolderPath = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Documents/Clipboard History", isDirectory: true).path
 
     init() {}
 
@@ -82,6 +149,10 @@ struct ClipboardSettings: Codable, Equatable {
         pasteAutomatically = (try? container.decodeIfPresent(Bool.self, forKey: .pasteAutomatically)) ?? defaults.pasteAutomatically
         pickerPosition = (try? container.decodeIfPresent(PickerPosition.self, forKey: .pickerPosition)) ?? defaults.pickerPosition
         ignoredBundleIdentifiers = (try? container.decodeIfPresent([String].self, forKey: .ignoredBundleIdentifiers)) ?? defaults.ignoredBundleIdentifiers
+        isArchiveEnabled = (try? container.decodeIfPresent(Bool.self, forKey: .isArchiveEnabled)) ?? defaults.isArchiveEnabled
+        archiveFolderPath = (try? container.decodeIfPresent(String.self, forKey: .archiveFolderPath)) ?? defaults.archiveFolderPath
+        archiveIncludesImages = (try? container.decodeIfPresent(Bool.self, forKey: .archiveIncludesImages)) ?? defaults.archiveIncludesImages
+        appearance = (try? container.decodeIfPresent(ClipboardPanelAppearance.self, forKey: .appearance)) ?? defaults.appearance
     }
 
     var activeShortcut: KeyCombo? {
@@ -128,19 +199,14 @@ struct WindowSettings: Codable, Equatable {
 
 struct ClaudeSettings: Codable, Equatable {
     var showUsageInTitle = true
-    var accountNames: [String: String] = [:]
+    var showNameInTitle = true
 
     init() {}
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         showUsageInTitle = (try? container.decodeIfPresent(Bool.self, forKey: .showUsageInTitle)) ?? true
-        accountNames = (try? container.decodeIfPresent([String: String].self, forKey: .accountNames)) ?? [:]
-    }
-
-    func displayName(for account: String) -> String {
-        let custom = accountNames[account]?.trimmingCharacters(in: .whitespaces) ?? ""
-        return custom.isEmpty ? "Conta \(account.uppercased())" : custom
+        showNameInTitle = (try? container.decodeIfPresent(Bool.self, forKey: .showNameInTitle)) ?? true
     }
 }
 

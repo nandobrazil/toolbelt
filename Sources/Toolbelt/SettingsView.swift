@@ -28,7 +28,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .menuBar: return "menubar.arrow.up.rectangle"
         case .clipboard: return "doc.on.clipboard"
         case .windows: return "rectangle.split.2x1"
-        case .claude: return "person.2.circle"
+        case .claude: return "sparkle"
         case .about: return "info.circle"
         }
     }
@@ -61,19 +61,24 @@ struct ClipboardStats {
 final class SettingsBridge: ObservableObject {
     @Published var selection: SettingsSection = .general
     @Published var clipboardStats = ClipboardStats()
-    @Published var claudeEmails: [String: String] = [:]
+    @Published var claudeAccounts: [ClaudeAccountSummary] = []
     @Published var isAccessibilityTrusted = AccessibilityPermission.isTrusted
 
     var modules: [ModuleInfo] = []
     var loadClipboardStats: () -> ClipboardStats = { ClipboardStats() }
-    var loadClaudeEmails: () -> [String: String] = { [:] }
+    var loadClaudeAccounts: () -> [ClaudeAccountSummary] = { [] }
+    var renameClaudeAccount: (String, String) -> Void = { _, _ in }
+    var addClaudeAccount: (String) -> Void = { _ in }
+    var removeClaudeAccount: (String) -> Void = { _ in }
+    var useClaudeAccount: (String) -> Void = { _ in }
     var clearClipboardHistory: () -> Void = {}
+    var previewClipboard: () -> Void = {}
     var arrangeMenuBar: () -> Void = {}
     var loginClaude: (String) -> Void = { _ in }
 
     func refresh() {
         clipboardStats = loadClipboardStats()
-        claudeEmails = loadClaudeEmails()
+        claudeAccounts = loadClaudeAccounts()
         isAccessibilityTrusted = AccessibilityPermission.isTrusted
     }
 }
@@ -274,6 +279,8 @@ private struct ClipboardSettingsPage: View {
                     .toggleStyle(.switch)
             }
 
+            ClipboardAppearanceSection(appearance: $settings.values.clipboard.appearance, onPreview: bridge.previewClipboard)
+
             Section {
                 Stepper(
                     "Guardar até \(settings.values.clipboard.historyLimit) itens",
@@ -305,9 +312,116 @@ private struct ClipboardSettingsPage: View {
                 Text("Cada print ocupa alguns MB. Senhas copiadas de gerenciadores como 1Password e Bitwarden nunca entram no histórico.")
             }
 
+            ClipboardArchiveSection(settings: settings)
+
             IgnoredApplicationsSection(identifiers: $settings.values.clipboard.ignoredBundleIdentifiers)
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct ClipboardAppearanceSection: View {
+    @Binding var appearance: ClipboardPanelAppearance
+    let onPreview: () -> Void
+
+    var body: some View {
+        Section {
+            Picker("Tema", selection: $appearance.theme) {
+                ForEach(PanelTheme.allCases) { theme in
+                    Text(theme.title).tag(theme)
+                }
+            }
+            Picker("Fundo", selection: $appearance.background) {
+                ForEach(PanelBackground.allCases) { background in
+                    Text(background.title).tag(background)
+                }
+            }
+            SliderRow(title: "Opacidade do fundo", value: $appearance.backgroundOpacity, range: 0.2...1, step: 0.05) {
+                "\(Int(($0 * 100).rounded()))%"
+            }
+            SliderRow(title: "Largura", value: $appearance.width, range: 300...720, step: 10) { "\(Int($0)) pt" }
+            SliderRow(title: "Altura máxima", value: $appearance.maximumHeight, range: 240...900, step: 20) { "\(Int($0)) pt" }
+            SliderRow(title: "Tamanho do texto", value: $appearance.fontSize, range: 11...18, step: 1) { "\(Int($0)) pt" }
+            SliderRow(title: "Altura das imagens", value: $appearance.imageHeight, range: 40...200, step: 8) { "\(Int($0)) pt" }
+            SliderRow(title: "Cantos arredondados", value: $appearance.cornerRadius, range: 0...24, step: 1) { "\(Int($0)) pt" }
+            Toggle("Mostrar os números de atalho (1–9, 0)", isOn: $appearance.showsShortcutNumbers)
+                .toggleStyle(.switch)
+            HStack {
+                Button("Pré-visualizar", action: onPreview)
+                Spacer()
+                Button("Restaurar aparência padrão") {
+                    appearance = ClipboardPanelAppearance()
+                }
+            }
+        } header: {
+            Text("Aparência do painel")
+        } footer: {
+            Text("Vidro transparente com opacidade baixa deixa ver o que está atrás. Na pré-visualização, ⎋ fecha sem colar.")
+        }
+    }
+}
+
+private struct SliderRow: View {
+    let title: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    let format: (Double) -> String
+
+    var body: some View {
+        HStack {
+            Slider(value: $value, in: range, step: step) {
+                Text(title)
+            }
+            Text(format(value))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(width: 56, alignment: .trailing)
+        }
+    }
+}
+
+private struct ClipboardArchiveSection: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        Section {
+            Toggle("Salvar tudo que for copiado em arquivo", isOn: $settings.values.clipboard.isArchiveEnabled)
+                .toggleStyle(.switch)
+            LabeledContent("Pasta") {
+                HStack {
+                    Text((settings.values.clipboard.archiveFolderPath as NSString).abbreviatingWithTildeInPath)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Button("Escolher…", action: chooseFolder)
+                    Button("Abrir") {
+                        let url = URL(fileURLWithPath: settings.values.clipboard.archiveFolderPath, isDirectory: true)
+                        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
+            .disabled(!settings.values.clipboard.isArchiveEnabled)
+            Toggle("Incluir imagens copiadas", isOn: $settings.values.clipboard.archiveIncludesImages)
+                .toggleStyle(.switch)
+                .disabled(!settings.values.clipboard.isArchiveEnabled)
+        } header: {
+            Text("Arquivo")
+        } footer: {
+            Text("Um arquivo por dia (AAAA-MM-DD.md) com a hora e o app de origem; imagens vão para a subpasta images. Senhas e apps ignorados não são salvos. O arquivo não tem limite de tamanho nem é apagado com o histórico.")
+        }
+    }
+
+    private func chooseFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Usar esta pasta"
+        panel.directoryURL = URL(fileURLWithPath: settings.values.clipboard.archiveFolderPath).deletingLastPathComponent()
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        settings.values.clipboard.archiveFolderPath = url.path
     }
 }
 
@@ -417,45 +531,134 @@ private struct WindowSettingsPage: View {
 private struct ClaudeSettingsPage: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var bridge: SettingsBridge
+    @State private var newAlias = ""
+    @State private var accountPendingRemoval: ClaudeAccountSummary?
 
     var body: some View {
         Form {
-            ModuleToggleSection(settings: settings, section: .claude, summary: "Alterna entre duas contas do Claude Code e mostra o uso de cada uma.")
+            ModuleToggleSection(settings: settings, section: .claude, summary: "Alterna entre contas do Claude Code e mostra o uso de cada uma.")
 
-            Section("Barra de menus") {
-                Toggle("Mostrar o uso das últimas 5 h no ícone", isOn: $settings.values.claude.showUsageInTitle)
+            Section("Ícone na barra") {
+                Toggle("Mostrar o nome da conta ativa", isOn: $settings.values.claude.showNameInTitle)
+                    .toggleStyle(.switch)
+                Toggle("Mostrar o uso das últimas 5 h", isOn: $settings.values.claude.showUsageInTitle)
                     .toggleStyle(.switch)
             }
 
             Section {
-                ForEach(["a", "b"], id: \.self) { account in
-                    LabeledContent("Conta \(account.uppercased())") {
-                        HStack {
-                            TextField("Nome", text: Binding(
-                                get: { settings.values.claude.accountNames[account] ?? "" },
-                                set: { settings.values.claude.accountNames[account] = $0 }
-                            ), prompt: Text("Conta \(account.uppercased())"))
-                            .frame(width: 140)
-                            let email = bridge.claudeEmails[account] ?? ""
-                            if email.isEmpty {
-                                Button("Entrar…") {
-                                    bridge.loginClaude(account)
-                                }
-                            } else {
-                                Text(email)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
+                ForEach(bridge.claudeAccounts) { account in
+                    ClaudeAccountRow(
+                        account: account,
+                        onRename: { alias in
+                            bridge.renameClaudeAccount(account.account, alias)
+                            bridge.refresh()
+                        },
+                        onUse: {
+                            bridge.useClaudeAccount(account.account)
+                            bridge.refresh()
+                        },
+                        onLogin: { bridge.loginClaude(account.account) },
+                        onRemove: { accountPendingRemoval = account }
+                    )
+                }
+                HStack {
+                    TextField("Apelido da nova conta (opcional)", text: $newAlias)
+                        .onSubmit(addAccount)
+                    Button("Adicionar conta", action: addAccount)
                 }
             } header: {
                 Text("Contas")
             } footer: {
-                Text("O nome aparece no ícone e no menu. No terminal: cca use a|b, cca swap e cca resume.")
+                Text("Cada conta tem seu próprio login; conversas, memória, skills e configurações são compartilhadas. No terminal: cca use <número ou apelido>, cca swap, cca resume.")
             }
         }
         .formStyle(.grouped)
+        .confirmationDialog(
+            "Remover \(accountPendingRemoval?.label ?? "")?",
+            isPresented: Binding(get: { accountPendingRemoval != nil }, set: { if !$0 { accountPendingRemoval = nil } }),
+            presenting: accountPendingRemoval
+        ) { account in
+            Button("Remover e sair da conta", role: .destructive) {
+                bridge.removeClaudeAccount(account.account)
+                bridge.refresh()
+            }
+        } message: { _ in
+            Text("O login dessa conta é encerrado; a pasta de configuração fica no disco.")
+        }
+    }
+
+    private func addAccount() {
+        bridge.addClaudeAccount(newAlias.trimmingCharacters(in: .whitespaces))
+        newAlias = ""
+        bridge.refresh()
+    }
+}
+
+private struct ClaudeAccountRow: View {
+    let account: ClaudeAccountSummary
+    let onRename: (String) -> Void
+    let onUse: () -> Void
+    let onLogin: () -> Void
+    let onRemove: () -> Void
+
+    @State private var alias = ""
+    @FocusState private var isEditing: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(account.account)
+                .font(.system(.body, design: .rounded).weight(.semibold))
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(account.active ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.15)))
+            VStack(alignment: .leading, spacing: 2) {
+                TextField("Apelido", text: $alias, prompt: Text("Conta \(account.account)"))
+                    .textFieldStyle(.plain)
+                    .font(.body.weight(.medium))
+                    .focused($isEditing)
+                    .onSubmit(commit)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if account.email == nil {
+                Button("Entrar…", action: onLogin)
+            } else if account.active {
+                Text("Ativa")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+            } else {
+                Button("Usar", action: onUse)
+            }
+            if !account.primary {
+                Button(action: onRemove) {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .help("Remover conta")
+            }
+        }
+        .onAppear { alias = account.alias }
+        .onChange(of: account.alias) { _, newValue in
+            if !isEditing { alias = newValue }
+        }
+        .onChange(of: isEditing) { _, editing in
+            if !editing { commit() }
+        }
+    }
+
+    private var subtitle: String {
+        guard let email = account.email else { return "sem login" }
+        let fiveHour = account.fiveHour.percent.map { "\($0)%" } ?? "?"
+        let sevenDay = account.sevenDay.percent.map { "\($0)%" } ?? "?"
+        return "\(email) · 5h \(fiveHour) · semana \(sevenDay)"
+    }
+
+    private func commit() {
+        let trimmed = alias.trimmingCharacters(in: .whitespaces)
+        guard trimmed != account.alias else { return }
+        onRename(trimmed)
     }
 }
 

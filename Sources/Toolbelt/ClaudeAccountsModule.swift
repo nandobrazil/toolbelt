@@ -1,18 +1,23 @@
 import AppKit
 
-private struct UsageWindow: Decodable {
+struct ClaudeUsageWindow: Decodable {
     let percent: Int?
     let resetsAt: String?
 }
 
-private struct AccountSummary: Decodable {
+struct ClaudeAccountSummary: Decodable, Identifiable {
     let account: String
+    let alias: String
+    let label: String
+    let primary: Bool
     let active: Bool
     let configured: Bool
     let email: String?
-    let fiveHour: UsageWindow
-    let sevenDay: UsageWindow
+    let fiveHour: ClaudeUsageWindow
+    let sevenDay: ClaudeUsageWindow
     let usageFetchedAtMs: Double?
+
+    var id: String { account }
 }
 
 private struct LatestSession: Decodable {
@@ -22,25 +27,31 @@ private struct LatestSession: Decodable {
 
 private struct StatusReport: Decodable {
     let active: String
-    let accounts: [AccountSummary]
+    let accounts: [ClaudeAccountSummary]
     let latestSession: LatestSession?
 }
 
 final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     let identifier = "claudeAccounts"
     let title = "Contas do Claude"
-    let summary = "Alterna entre duas contas do Claude Code e mostra o uso de cada uma."
-    let symbolName = "person.2.circle"
+    let summary = "Alterna entre contas do Claude Code e mostra o uso de cada uma."
+    let symbolName = "sparkle"
+
+    private static let maximumTitleLength = 12
 
     private let accountsCommand = NSString(string: "~/.local/bin/cca").expandingTildeInPath
     private var statusItem: NSStatusItem?
     private let menu = NSMenu()
     private var report: StatusReport?
     private var refreshTimer: Timer?
+    var onOpenSettings: (() -> Void)?
+
+    var accounts: [ClaudeAccountSummary] { report?.accounts ?? [] }
 
     func start() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.autosaveName = "toolbelt.claude"
+        item.button?.imagePosition = .imageLeading
         menu.delegate = self
         item.menu = menu
         statusItem = item
@@ -62,32 +73,44 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         updateTitle()
     }
 
-    func accountEmails() -> [String: String] {
-        var emails: [String: String] = [:]
-        for account in report?.accounts ?? [] {
-            emails[account.account] = account.email ?? ""
-        }
-        return emails
-    }
-
-    func switchAccount() {
-        let active = report?.active ?? "a"
-        runAccountsCommand(["use", active == "a" ? "b" : "a"])
-        refresh()
-    }
-
-    func login(_ account: String) {
-        Terminal.run("cca setup >/dev/null && cca login \(account)")
-    }
-
     func menuNeedsUpdate(_ menu: NSMenu) {
         refresh()
     }
 
-    private func refresh() {
+    func refresh() {
         report = loadReport()
         updateTitle()
         rebuildMenu()
+    }
+
+    func use(_ account: String) {
+        runAccountsCommand(["use", account])
+        refresh()
+    }
+
+    func switchAccount() {
+        guard let report, report.accounts.count > 1,
+              let index = report.accounts.firstIndex(where: { $0.active }) else { return }
+        use(report.accounts[(index + 1) % report.accounts.count].account)
+    }
+
+    func login(_ account: String) {
+        Terminal.run("cca login \(account)")
+    }
+
+    func rename(_ account: String, alias: String) {
+        runAccountsCommand(["rename", account] + (alias.isEmpty ? [] : [alias]))
+        refresh()
+    }
+
+    func addAccount(alias: String) {
+        runAccountsCommand(["add"] + (alias.isEmpty ? [] : [alias]))
+        refresh()
+    }
+
+    func remove(_ account: String) {
+        runAccountsCommand(["remove", account])
+        refresh()
     }
 
     private func loadReport() -> StatusReport? {
@@ -115,15 +138,31 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     }
 
     private func updateTitle() {
+        guard let button = statusItem?.button else { return }
+        let configuration = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
+        let image = NSImage(systemSymbolName: "sparkle", accessibilityDescription: "Claude")?
+            .withSymbolConfiguration(configuration)
+        image?.isTemplate = true
+        button.image = image
+
         guard let report, let active = report.accounts.first(where: { $0.active }) else {
-            statusItem?.button?.title = "✳︎ ?"
+            button.title = " ?"
             return
         }
         let settings = AppSettings.shared.values.claude
-        let usage = settings.showUsageInTitle ? (active.fiveHour.percent.map { " \($0)%" } ?? "") : ""
-        let customName = settings.accountNames[active.account]?.trimmingCharacters(in: .whitespaces) ?? ""
-        let name = customName.isEmpty ? active.account.uppercased() : customName
-        statusItem?.button?.title = "✳︎ \(name)\(usage)"
+        var parts: [String] = []
+        if settings.showNameInTitle {
+            parts.append(Self.shortened(active.alias.isEmpty ? active.account : active.alias))
+        }
+        if settings.showUsageInTitle, let percent = active.fiveHour.percent {
+            parts.append("\(percent)%")
+        }
+        button.title = parts.isEmpty ? "" : " " + parts.joined(separator: " · ")
+        button.toolTip = "\(active.label) · \(active.email ?? "sem login")"
+    }
+
+    private static func shortened(_ text: String) -> String {
+        text.count > maximumTitleLength ? String(text.prefix(maximumTitleLength - 1)) + "…" : text
     }
 
     private func rebuildMenu() {
@@ -133,11 +172,11 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
             return
         }
 
+        menu.addItem(sectionHeader("Contas do Claude"))
         for account in report.accounts {
             let name = account.account
-            let item = ActionMenuItem(title: accountTitle(account)) { [weak self] in
-                self?.runAccountsCommand(["use", name])
-                self?.refresh()
+            let item = ActionMenuItem(title: "\(account.label) · \(account.email ?? "sem login")") { [weak self] in
+                self?.use(name)
             }
             item.state = account.active ? .on : .off
             menu.addItem(item)
@@ -147,60 +186,57 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         menu.addItem(.separator())
         if let session = report.latestSession, let cwd = session.cwd {
             menu.addItem(disabledMenuItem("Última conversa: " + (cwd as NSString).abbreviatingWithTildeInPath))
-        }
-        for account in report.accounts {
-            let name = account.account
-            let item = ActionMenuItem(title: "Retomar última conversa em \(AppSettings.shared.values.claude.displayName(for: name))") { [weak self] in
-                self?.runAccountsCommand(["use", name])
-                Terminal.run("cca resume \(name)")
-                self?.refresh()
-            }
-            item.isEnabled = account.email != nil && report.latestSession != nil
-            menu.addItem(item)
-        }
-
-        let missingLogins = report.accounts.filter { $0.email == nil }
-        if !missingLogins.isEmpty {
-            menu.addItem(.separator())
-            for account in missingLogins {
+            let resumeItem = NSMenuItem(title: "Retomar última conversa em", action: nil, keyEquivalent: "")
+            let resumeMenu = NSMenu()
+            for account in report.accounts where account.email != nil {
                 let name = account.account
-                menu.addItem(ActionMenuItem(title: "Entrar em \(AppSettings.shared.values.claude.displayName(for: name))…") {
-                    Terminal.run("cca setup >/dev/null && cca login \(name)")
+                resumeMenu.addItem(ActionMenuItem(title: account.label) { [weak self] in
+                    self?.use(name)
+                    Terminal.run("cca resume \(name)")
                 })
             }
+            resumeItem.submenu = resumeMenu
+            menu.addItem(resumeItem)
         }
+
+        for account in report.accounts where account.email == nil {
+            let name = account.account
+            menu.addItem(ActionMenuItem(title: "Entrar em \(account.label)…") { [weak self] in
+                self?.login(name)
+            })
+        }
+
+        menu.addItem(.separator())
+        menu.addItem(ActionMenuItem(title: "Gerenciar contas…") { [weak self] in
+            self?.onOpenSettings?()
+        })
     }
 
-    private func accountTitle(_ account: AccountSummary) -> String {
-        let label = account.email ?? (account.configured ? "sem login" : "não configurada")
-        return "\(AppSettings.shared.values.claude.displayName(for: account.account)) · \(label)"
-    }
-
-    private func usageLine(_ account: AccountSummary) -> String {
+    private func usageLine(_ account: ClaudeAccountSummary) -> String {
         guard account.email != nil else { return "—" }
         let fiveHour = account.fiveHour.percent.map { "\($0)%" } ?? "?"
         let sevenDay = account.sevenDay.percent.map { "\($0)%" } ?? "?"
         var line = "5h \(fiveHour)\(resetSuffix(account.fiveHour.resetsAt)) · semana \(sevenDay)"
         if let fetchedAtMs = account.usageFetchedAtMs {
-            line += " · \(relativeAge(fetchedAtMs))"
+            line += " · \(Self.relativeAge(fetchedAtMs))"
         }
         return line
     }
 
     private func resetSuffix(_ isoDate: String?) -> String {
-        guard let isoDate, let date = parseDate(isoDate), date > Date() else { return "" }
+        guard let isoDate, let date = Self.parseDate(isoDate), date > Date() else { return "" }
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return " (zera \(formatter.string(from: date)))"
     }
 
-    private func parseDate(_ value: String) -> Date? {
+    static func parseDate(_ value: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.date(from: value) ?? ISO8601DateFormatter().date(from: value)
     }
 
-    private func relativeAge(_ milliseconds: Double) -> String {
+    static func relativeAge(_ milliseconds: Double) -> String {
         let minutes = Int(Date().timeIntervalSince1970 - milliseconds / 1000) / 60
         if minutes < 1 { return "agora" }
         if minutes < 60 { return "há \(minutes) min" }
