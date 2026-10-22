@@ -97,6 +97,7 @@ final class HotKeyCenter {
             registration.reference = reference
         }
         registrations[identifier] = registration
+        syncNativeWindowSwitching()
         return identifier
     }
 
@@ -104,6 +105,7 @@ final class HotKeyCenter {
         if let reference = registrations.removeValue(forKey: identifier)?.reference {
             UnregisterEventHotKey(reference)
         }
+        syncNativeWindowSwitching()
     }
 
     func suspend() {
@@ -115,6 +117,7 @@ final class HotKeyCenter {
             }
             registrations[identifier]?.reference = nil
         }
+        syncNativeWindowSwitching()
     }
 
     func resume() {
@@ -123,6 +126,14 @@ final class HotKeyCenter {
         for (identifier, registration) in registrations {
             registrations[identifier]?.reference = registerSystemHotKey(registration.combo, identifier: identifier)
         }
+        syncNativeWindowSwitching()
+    }
+
+    private func syncNativeWindowSwitching() {
+        NativeWindowSwitching.update(
+            claimedCombos: Set(registrations.values.map(\.combo)),
+            isRecordingShortcut: isSuspended
+        )
     }
 
     fileprivate func handle(_ identifier: UInt32) {

@@ -26,6 +26,7 @@ final class AppController: NSObject {
 
     func start() {
         NSLog("Toolbelt: started, accessibility trusted=\(AccessibilityPermission.isTrusted)")
+        NativeWindowSwitching.restoreOnExit()
         MainMenuBuilder.install { [weak self] in self?.openSettings() }
         restoreMissingItemPositions()
         configureSettingsBridge()

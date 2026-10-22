@@ -588,9 +588,13 @@ private struct AppSwitcherSettingsPage: View {
     @ObservedObject var settings: AppSettings
     @State private var screenRecordingGranted = ScreenRecordingPermission.isGranted
 
+    private var shortcutDisplay: String {
+        settings.values.appSwitcher.activeShortcut?.display ?? "O atalho"
+    }
+
     var body: some View {
         Form {
-            ModuleToggleSection(settings: settings, section: .switcher, summary: "⌥⇥ mostra todas as janelas abertas e troca entre elas, como o AltTab.")
+            ModuleToggleSection(settings: settings, section: .switcher, summary: "\(shortcutDisplay) mostra todas as janelas abertas e troca entre elas, como o AltTab.")
 
             Section {
                 LabeledContent("Todas as janelas") {
@@ -624,7 +628,7 @@ private struct AppSwitcherSettingsPage: View {
             } header: {
                 Text("Atalho e painel")
             } footer: {
-                Text("Segure a tecla modificadora e aperte o atalho para avançar; com ⇧ volta. Solte para trocar. ⌥⇥ rápido vai direto para a janela anterior. Com o painel aberto: W fecha a janela, M minimiza, H esconde o app, Q fecha o app e / abre a busca (aí pode soltar o ⌥, digitar e confirmar com ⏎). O mouse também seleciona e clicar troca.")
+                Text("Segure a tecla modificadora e aperte o atalho para avançar; com ⇧ volta. Solte para trocar. \(shortcutDisplay) rápido vai direto para a janela anterior. Com o painel aberto: W fecha a janela, M minimiza, H esconde o app, Q fecha o app e / abre a busca (aí pode soltar a tecla modificadora, digitar e confirmar com ⏎). O mouse também seleciona e clicar troca. Atalhos com ⌘⇥ ou ⌘` substituem os do macOS enquanto o Toolbelt estiver aberto.")
             }
 
             Section {

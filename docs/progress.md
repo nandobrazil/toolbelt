@@ -4,7 +4,7 @@
 
 Tudo instalado em `~/Applications/Toolbelt.app` e no GitHub (`main`). Módulos ligados: barra de menus, alternar janelas, área de transferência, janelas, monitor do sistema, contas do Claude.
 
-Configuração atual do usuário: ícone "cinto", nada ao lado do cinto (`inlineInfo` vazio), ícones próprios do Claude e do monitor ligados, painel com seções Claude e Sistema, miniaturas do alternador desligadas, arquivo da área de transferência desligado.
+Configuração atual do usuário: ícone "cinto", nada ao lado do cinto (`inlineInfo` vazio), ícones próprios do Claude e do monitor ligados, painel com seções Claude e Sistema, alternador em ⌘⇥ (como no AltTab), miniaturas do alternador ligadas, arquivo da área de transferência desligado.
 
 ## Testado e não testado
 
@@ -28,6 +28,7 @@ Configuração atual do usuário: ícone "cinto", nada ao lado do cinto (`inline
 - Uso do Claude: lido do `cachedUsageUtilization` de cada `.claude.json` (só muda quando o Claude Code roda). Atualiza por FileWatcher + timer no horário do reset; sem polling e sem chamar endpoint não documentado.
 - Monitor: leituras nativas (host_statistics64, `vm.swapusage`, statfs); o relatório completo reutiliza o `macscan` (fonte única para terminal e app).
 - Alternador: `WindowCatalog` usa AX + `_AXUIElementGetWindow` (API privada estável, também usada pelo AltTab/Rectangle) e a ordem do `CGWindowList`. Foco via `kAXFrontmostAttribute` + `AXRaise` (evita a ativação cooperativa do macOS 14). Busca entra com `/` porque W/M/H/Q são ações.
+- ⌘⇥ no alternador: o macOS pega ⌘⇥/⌘⇧⇥/⌘` antes do app (symbolic hotkeys 1, 2 e 27, conferidos com `CGSGetSymbolicHotKeyValue`). `NativeWindowSwitching` desliga só o que algum atalho do Toolbelt usa (e tudo durante a gravação de atalho), como o AltTab, e religa ao sair (willTerminate + SIGTERM/INT/HUP/QUIT) e ao iniciar. Se o app travar, o ⌘⇥ do macOS só volta quando o Toolbelt abrir de novo.
 - Miniaturas: ScreenCaptureKit, prints estáticos; cache de 24 imagens (~6 MB) só com a opção ligada.
 - Barra limpa: o usuário escolhe o que aparece ao lado do cinto (`InlineInfo`); ícones próprios são opcionais; o conteúdo também aparece no painel do cinto.
 
