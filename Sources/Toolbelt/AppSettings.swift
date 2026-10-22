@@ -198,8 +198,11 @@ struct WindowSettings: Codable, Equatable {
 }
 
 struct ClaudeSettings: Codable, Equatable {
+    static let palette = ["#D97757", "#3B82F6", "#22C55E", "#A855F7", "#EC4899", "#EAB308", "#14B8A6", "#64748B"]
+
     var showUsageInTitle = true
     var showNameInTitle = true
+    var accountColors: [String: String] = [:]
 
     init() {}
 
@@ -207,6 +210,38 @@ struct ClaudeSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         showUsageInTitle = (try? container.decodeIfPresent(Bool.self, forKey: .showUsageInTitle)) ?? true
         showNameInTitle = (try? container.decodeIfPresent(Bool.self, forKey: .showNameInTitle)) ?? true
+        accountColors = (try? container.decodeIfPresent([String: String].self, forKey: .accountColors)) ?? [:]
+    }
+
+    func colorHex(for account: String) -> String {
+        if let custom = accountColors[account] {
+            return custom
+        }
+        let index = max((Int(account) ?? 1) - 1, 0)
+        return Self.palette[index % Self.palette.count]
+    }
+}
+
+extension NSColor {
+    convenience init(hex: String) {
+        let digits = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        let value = UInt32(digits, radix: 16) ?? 0x888888
+        self.init(
+            srgbRed: CGFloat((value >> 16) & 0xFF) / 255,
+            green: CGFloat((value >> 8) & 0xFF) / 255,
+            blue: CGFloat(value & 0xFF) / 255,
+            alpha: 1
+        )
+    }
+
+    var hexString: String {
+        let color = usingColorSpace(.sRGB) ?? self
+        return String(
+            format: "#%02X%02X%02X",
+            Int((color.redComponent * 255).rounded()),
+            Int((color.greenComponent * 255).rounded()),
+            Int((color.blueComponent * 255).rounded())
+        )
     }
 }
 

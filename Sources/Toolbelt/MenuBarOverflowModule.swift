@@ -16,7 +16,14 @@ final class MenuBarOverflowModule: ToolbeltModule {
     private var separatorItem: NSStatusItem?
     private var autoCollapseTimer: Timer?
     private var popupWatchTimer: Timer?
+    private static let cacheRefreshInterval: TimeInterval = 15
+
     private(set) var isCollapsed = false
+    private(set) var cachedExtras: [MenuBarExtra] = []
+    private var cacheTimer: Timer?
+    private var isRefreshingCache = false
+    private var pendingRefreshCompletions: [([MenuBarExtra]) -> Void] = []
+    private var workspaceObservers: [NSObjectProtocol] = []
     var onStateChange: (() -> Void)?
 
     func start() {
@@ -29,9 +36,48 @@ final class MenuBarOverflowModule: ToolbeltModule {
         item.button?.toolTip = "Arraste com ⌘ os ícones para a esquerda deste traço para escondê-los"
         separatorItem = item
         collapse()
+        refreshCache()
+        cacheTimer = Timer.scheduledTimer(withTimeInterval: Self.cacheRefreshInterval, repeats: true) { [weak self] _ in
+            self?.refreshCache()
+        }
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
+            workspaceObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { self?.refreshCache() }
+            })
+        }
+    }
+
+    func refreshCache(completion: (([MenuBarExtra]) -> Void)? = nil) {
+        if let completion {
+            pendingRefreshCompletions.append(completion)
+        }
+        guard isCollapsed, !isRefreshingCache else { return }
+        isRefreshingCache = true
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let startedAt = Date()
+            let extras = MenuBarExtras.all()
+            let elapsed = Date().timeIntervalSince(startedAt)
+            if elapsed > 0.5 {
+                NSLog("Toolbelt: slow menu bar scan, found \(extras.count) items in \(String(format: "%.2f", elapsed)) s")
+            }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isRefreshingCache = false
+                guard self.isCollapsed else { return }
+                self.cachedExtras = extras
+                let hidden = MenuBarExtras.hidden(from: extras)
+                let completions = self.pendingRefreshCompletions
+                self.pendingRefreshCompletions.removeAll()
+                completions.forEach { $0(hidden) }
+            }
+        }
     }
 
     func stop() {
+        cacheTimer?.invalidate()
+        workspaceObservers.forEach(NSWorkspace.shared.notificationCenter.removeObserver)
+        workspaceObservers.removeAll()
         autoCollapseTimer?.invalidate()
         popupWatchTimer?.invalidate()
         if let separatorItem {
@@ -46,7 +92,7 @@ final class MenuBarOverflowModule: ToolbeltModule {
         if !isCollapsed {
             collapse()
         }
-        return MenuBarExtras.hidden()
+        return MenuBarExtras.hidden(from: cachedExtras)
     }
 
     func toggleArrangeMode() {

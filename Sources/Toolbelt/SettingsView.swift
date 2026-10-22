@@ -539,7 +539,7 @@ private struct ClaudeSettingsPage: View {
             ModuleToggleSection(settings: settings, section: .claude, summary: "Alterna entre contas do Claude Code e mostra o uso de cada uma.")
 
             Section("Ícone na barra") {
-                Toggle("Mostrar o nome da conta ativa", isOn: $settings.values.claude.showNameInTitle)
+                Toggle("Mostrar o nome da conta ativa (apelido ou início do e-mail)", isOn: $settings.values.claude.showNameInTitle)
                     .toggleStyle(.switch)
                 Toggle("Mostrar o uso das últimas 5 h", isOn: $settings.values.claude.showUsageInTitle)
                     .toggleStyle(.switch)
@@ -600,18 +600,20 @@ private struct ClaudeAccountRow: View {
     let onUse: () -> Void
     let onLogin: () -> Void
     let onRemove: () -> Void
+    @ObservedObject var settings = AppSettings.shared
 
     @State private var alias = ""
     @FocusState private var isEditing: Bool
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(account.account)
-                .font(.system(.body, design: .rounded).weight(.semibold))
-                .frame(width: 26, height: 26)
-                .background(Circle().fill(account.active ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.15)))
+            ColorPicker("", selection: color, supportsOpacity: false)
+                .labelsHidden()
+                .frame(width: 28)
+                .help("Cor do selo desta conta")
+            Image(nsImage: AccountBadge.image(for: account.account, diameter: 24))
             VStack(alignment: .leading, spacing: 2) {
-                TextField("Apelido", text: $alias, prompt: Text("Conta \(account.account)"))
+                TextField("Apelido", text: $alias, prompt: Text(account.shortName))
                     .textFieldStyle(.plain)
                     .font(.body.weight(.medium))
                     .focused($isEditing)
@@ -646,6 +648,13 @@ private struct ClaudeAccountRow: View {
         .onChange(of: isEditing) { _, editing in
             if !editing { commit() }
         }
+    }
+
+    private var color: Binding<Color> {
+        Binding(
+            get: { Color(nsColor: NSColor(hex: settings.values.claude.colorHex(for: account.account))) },
+            set: { settings.values.claude.accountColors[account.account] = NSColor($0).hexString }
+        )
     }
 
     private var subtitle: String {

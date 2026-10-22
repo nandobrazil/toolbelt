@@ -14,10 +14,16 @@ final class AppController: NSObject {
     private var chevronItem: NSStatusItem?
     private var runningModuleIdentifiers: Set<String> = []
     private var settingsSubscription: AnyCancellable?
+    private static let defaultItemPositions: [String: Double] = [
+        "toolbelt.claude": 340,
+        "toolbelt.chevron": 365,
+        "toolbelt.separator": 385
+    ]
 
     func start() {
         NSLog("Toolbelt: started, accessibility trusted=\(AccessibilityPermission.isTrusted)")
         MainMenuBuilder.install { [weak self] in self?.openSettings() }
+        restoreMissingItemPositions()
         configureSettingsBridge()
 
         startIfEnabled(claudeAccounts)
@@ -36,6 +42,16 @@ final class AppController: NSObject {
             .dropFirst()
             .debounce(for: .milliseconds(150), scheduler: RunLoop.main)
             .sink { [weak self] _ in self?.applySettings() }
+    }
+
+    private func restoreMissingItemPositions() {
+        let defaults = UserDefaults.standard
+        for (name, position) in Self.defaultItemPositions {
+            let key = "NSStatusItem Preferred Position \(name)"
+            if defaults.object(forKey: key) == nil {
+                defaults.set(position, forKey: key)
+            }
+        }
     }
 
     func openSettings(section: SettingsSection? = nil) {
@@ -75,6 +91,7 @@ final class AppController: NSObject {
             let shouldRun = settings.isModuleEnabled(module.identifier)
             let isRunning = runningModuleIdentifiers.contains(module.identifier)
             if shouldRun && !isRunning {
+                restoreMissingItemPositions()
                 startIfEnabled(module)
                 if module.requiresAccessibility {
                     AccessibilityPermission.requestIfNeeded()
@@ -82,6 +99,7 @@ final class AppController: NSObject {
             } else if !shouldRun && isRunning {
                 module.stop()
                 runningModuleIdentifiers.remove(module.identifier)
+                restoreMissingItemPositions()
             } else if isRunning {
                 module.settingsDidChange()
             }
@@ -104,7 +122,7 @@ final class AppController: NSObject {
         item.autosaveName = "toolbelt.chevron"
         item.button?.target = self
         item.button?.action = #selector(chevronClicked)
-        item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        item.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
         item.button?.toolTip = "Toolbelt · clique: painel · ⌥ clique: organizar a barra · clique direito: menu rápido"
         chevronItem = item
     }
@@ -123,7 +141,7 @@ final class AppController: NSObject {
 
     @objc private func chevronClicked() {
         let event = NSApp.currentEvent
-        if event?.type == .rightMouseUp {
+        if event?.type == .rightMouseDown {
             showQuickMenu()
         } else if event?.modifierFlags.contains(.option) == true, isRunning(menuBarOverflow) {
             panel.close()
@@ -138,13 +156,23 @@ final class AppController: NSObject {
             panel.close()
             return
         }
-        guard let anchor = chevronItem?.button?.window?.frame else { return }
-        let hiddenExtras: [MenuBarExtra]?
-        if isRunning(menuBarOverflow) && AccessibilityPermission.isTrusted {
-            hiddenExtras = menuBarOverflow.hiddenExtras()
-        } else {
-            hiddenExtras = nil
+        let showsHiddenItems = isRunning(menuBarOverflow) && AccessibilityPermission.isTrusted
+        let cached = showsHiddenItems ? menuBarOverflow.hiddenExtras() : nil
+        presentPanel(hiddenExtras: cached)
+        guard showsHiddenItems else { return }
+        menuBarOverflow.refreshCache { [weak self] fresh in
+            guard let self, self.panel.isVisible, let cached, !Self.sameItems(cached, fresh) else { return }
+            self.presentPanel(hiddenExtras: fresh)
         }
+    }
+
+    private static func sameItems(_ first: [MenuBarExtra], _ second: [MenuBarExtra]) -> Bool {
+        first.map { "\($0.processIdentifier)|\($0.label)" } == second.map { "\($0.processIdentifier)|\($0.label)" }
+    }
+
+    private func presentPanel(hiddenExtras: [MenuBarExtra]?) {
+        guard let anchor = chevronItem?.button?.window?.frame else { return }
+        panel.onClose = nil
         panel.show(
             hiddenExtras: hiddenExtras,
             columns: settings.values.menuBar.panelColumns,
@@ -157,6 +185,7 @@ final class AppController: NSObject {
         ) { [weak self] extra in
             self?.menuBarOverflow.open(extra)
         }
+        panel.onClose = { [weak self] in self?.updateChevronIcon() }
         updateChevronIcon()
     }
 

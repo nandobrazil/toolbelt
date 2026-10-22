@@ -19,38 +19,87 @@ struct MenuBarExtra {
 
 enum MenuBarExtras {
     private static let maximumItemWidth: CGFloat = 300
-    private static let messagingTimeout: Float = 0.25
+    private static let messagingTimeout: Float = 0.1
+    private static let stateQueue = DispatchQueue(label: "dev.oconde.toolbelt.menu-bar-extras")
+    private static let skipListLifetime: TimeInterval = 60
+    private static var processesWithoutExtras: Set<pid_t> = []
+    private static var skipListCreatedAt = Date()
 
-    static func hidden() -> [MenuBarExtra] {
+    static func hidden(from extras: [MenuBarExtra]) -> [MenuBarExtra] {
         let visibleStart = visibleAreaStart()
-        return all().filter { $0.frame.minX < visibleStart }
+        return extras.filter { $0.frame.minX < visibleStart }
     }
 
     static func all() -> [MenuBarExtra] {
         let ownProcess = ProcessInfo.processInfo.processIdentifier
+        let running = NSWorkspace.shared.runningApplications.filter { application in
+            application.processIdentifier != ownProcess && !isHelperProcess(application)
+        }
+        let skipped = stateQueue.sync { () -> Set<pid_t> in
+            if Date().timeIntervalSince(skipListCreatedAt) > skipListLifetime {
+                processesWithoutExtras.removeAll()
+                skipListCreatedAt = Date()
+            }
+            processesWithoutExtras.formIntersection(running.map(\.processIdentifier))
+            return processesWithoutExtras
+        }
+        let candidates = running.filter { !skipped.contains($0.processIdentifier) }
+
+        var results = [[MenuBarExtra]?](repeating: nil, count: candidates.count)
+        let resultsLock = NSLock()
+        DispatchQueue.concurrentPerform(iterations: candidates.count) { index in
+            let found = extrasOf(candidates[index])
+            resultsLock.lock()
+            results[index] = found
+            resultsLock.unlock()
+        }
+
+        var withoutExtras: [pid_t] = []
         var extras: [MenuBarExtra] = []
-        for application in NSWorkspace.shared.runningApplications where application.processIdentifier != ownProcess {
-            let applicationElement = AXUIElementCreateApplication(application.processIdentifier)
-            AXUIElementSetMessagingTimeout(applicationElement, messagingTimeout)
-            guard let bar = copyElement(applicationElement, "AXExtrasMenuBar"),
-                  let children = copyAttribute(bar, kAXChildrenAttribute) as? [AXUIElement] else { continue }
-            for child in children {
-                guard let frame = frame(of: child), frame.width > 0, frame.width < maximumItemWidth else { continue }
-                let name = application.localizedName ?? application.bundleIdentifier ?? "App"
-                let description = (copyAttribute(child, kAXDescriptionAttribute) as? String) ?? ""
-                let title = (copyAttribute(child, kAXTitleAttribute) as? String) ?? ""
-                let label = [title, description].first { !$0.isEmpty } ?? name
-                extras.append(MenuBarExtra(
-                    element: child,
-                    processIdentifier: application.processIdentifier,
-                    applicationName: name,
-                    icon: application.icon,
-                    label: label == name ? name : "\(name) — \(label)",
-                    frame: frame
-                ))
+        for (index, result) in results.enumerated() {
+            if let result {
+                extras.append(contentsOf: result)
+            } else {
+                withoutExtras.append(candidates[index].processIdentifier)
             }
         }
+        stateQueue.sync {
+            processesWithoutExtras.formUnion(withoutExtras)
+        }
         return extras.sorted { $0.frame.minX < $1.frame.minX }
+    }
+
+    private static func extrasOf(_ application: NSRunningApplication) -> [MenuBarExtra]? {
+        let applicationElement = AXUIElementCreateApplication(application.processIdentifier)
+        AXUIElementSetMessagingTimeout(applicationElement, messagingTimeout)
+        var barValue: CFTypeRef?
+        let status = AXUIElementCopyAttributeValue(applicationElement, "AXExtrasMenuBar" as CFString, &barValue)
+        guard status == .success, let barValue, CFGetTypeID(barValue) == AXUIElementGetTypeID() else {
+            return status == .cannotComplete ? [] : nil
+        }
+        let bar = barValue as! AXUIElement
+        AXUIElementSetMessagingTimeout(bar, messagingTimeout)
+        guard let children = copyAttribute(bar, kAXChildrenAttribute) as? [AXUIElement] else { return [] }
+        let name = application.localizedName ?? application.bundleIdentifier ?? "App"
+        return children.compactMap { child in
+            guard let frame = frame(of: child), frame.width > 0, frame.width < maximumItemWidth else { return nil }
+            let description = (copyAttribute(child, kAXDescriptionAttribute) as? String) ?? ""
+            let title = (copyAttribute(child, kAXTitleAttribute) as? String) ?? ""
+            let label = [title, description].first { !$0.isEmpty } ?? name
+            return MenuBarExtra(
+                element: child,
+                processIdentifier: application.processIdentifier,
+                applicationName: name,
+                icon: application.icon,
+                label: label == name ? name : "\(name) — \(label)",
+                frame: frame
+            )
+        }
+    }
+
+    private static func isHelperProcess(_ application: NSRunningApplication) -> Bool {
+        let path = application.bundleURL?.path ?? ""
+        return path.contains(".xpc") || path.contains("/XPCServices/") || path.contains("/Frameworks/")
     }
 
     static func hasOpenPopup(for processIdentifier: pid_t) -> Bool {

@@ -18,6 +18,38 @@ struct ClaudeAccountSummary: Decodable, Identifiable {
     let usageFetchedAtMs: Double?
 
     var id: String { account }
+
+    var shortName: String {
+        if !alias.isEmpty {
+            return alias
+        }
+        if let email, let localPart = email.split(separator: "@").first {
+            return String(localPart)
+        }
+        return "Conta \(account)"
+    }
+}
+
+enum AccountBadge {
+    static func image(for account: String, diameter: CGFloat = 16) -> NSImage {
+        let color = NSColor(hex: AppSettings.shared.values.claude.colorHex(for: account))
+        let size = NSSize(width: diameter, height: diameter)
+        let image = NSImage(size: size, flipped: false) { rect in
+            color.setFill()
+            NSBezierPath(ovalIn: rect.insetBy(dx: 0.5, dy: 0.5)).fill()
+            let text = account.count > 2 ? String(account.prefix(2)) : account
+            let font = NSFont.systemFont(ofSize: diameter * (text.count > 1 ? 0.5 : 0.62), weight: .bold)
+            let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.white]
+            let textSize = text.size(withAttributes: attributes)
+            text.draw(
+                at: NSPoint(x: rect.midX - textSize.width / 2, y: rect.midY - textSize.height / 2),
+                withAttributes: attributes
+            )
+            return true
+        }
+        image.isTemplate = false
+        return image
+    }
 }
 
 private struct LatestSession: Decodable {
@@ -139,26 +171,24 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
 
     private func updateTitle() {
         guard let button = statusItem?.button else { return }
-        let configuration = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
-        let image = NSImage(systemSymbolName: "sparkle", accessibilityDescription: "Claude")?
-            .withSymbolConfiguration(configuration)
-        image?.isTemplate = true
-        button.image = image
-
         guard let report, let active = report.accounts.first(where: { $0.active }) else {
+            let image = NSImage(systemSymbolName: "sparkle", accessibilityDescription: "Claude")
+            image?.isTemplate = true
+            button.image = image
             button.title = " ?"
             return
         }
+        button.image = AccountBadge.image(for: active.account)
         let settings = AppSettings.shared.values.claude
         var parts: [String] = []
         if settings.showNameInTitle {
-            parts.append(Self.shortened(active.alias.isEmpty ? active.account : active.alias))
+            parts.append(Self.shortened(active.shortName))
         }
         if settings.showUsageInTitle, let percent = active.fiveHour.percent {
             parts.append("\(percent)%")
         }
         button.title = parts.isEmpty ? "" : " " + parts.joined(separator: " · ")
-        button.toolTip = "\(active.label) · \(active.email ?? "sem login")"
+        button.toolTip = "Conta ativa: \(active.shortName) · \(active.email ?? "sem login")"
     }
 
     private static func shortened(_ text: String) -> String {
@@ -172,12 +202,19 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
             return
         }
 
-        menu.addItem(sectionHeader("Contas do Claude"))
+        if let active = report.accounts.first(where: { $0.active }) {
+            let header = disabledMenuItem("Ativa agora: \(active.shortName)")
+            header.image = AccountBadge.image(for: active.account)
+            menu.addItem(header)
+            menu.addItem(.separator())
+        }
+        menu.addItem(sectionHeader("Trocar para"))
         for account in report.accounts {
             let name = account.account
-            let item = ActionMenuItem(title: "\(account.label) · \(account.email ?? "sem login")") { [weak self] in
+            let item = ActionMenuItem(title: "\(account.shortName) · \(account.email ?? "sem login")") { [weak self] in
                 self?.use(name)
             }
+            item.image = AccountBadge.image(for: account.account)
             item.state = account.active ? .on : .off
             menu.addItem(item)
             menu.addItem(disabledMenuItem("     " + usageLine(account)))
