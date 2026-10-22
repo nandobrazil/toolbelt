@@ -1,0 +1,894 @@
+#!/usr/bin/env python3
+import argparse
+import concurrent.futures
+import datetime
+import glob
+import json
+import os
+import plistlib
+import re
+import shutil
+import subprocess
+import sys
+
+HOME = os.path.expanduser("~")
+TAILSCALE_COMMANDS = (
+    "/usr/local/bin/tailscale",
+    "/opt/homebrew/bin/tailscale",
+    "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
+)
+SOFTWARE_UPDATE_PLIST = "/Library/Preferences/com.apple.SoftwareUpdate.plist"
+SYSTEM_ASSETS = "/System/Volumes/Data/System/Library/AssetsV2"
+SYSTEM_VOLUMES_KEY = "apfs:system-volumes"
+GIB = 1024 ** 3
+SWAP_WARNING_BYTES = 4 * GIB
+DISK_WARNING_RATIO = 0.10
+DISK_CRITICAL_RATIO = 0.05
+BATTERY_HEALTH_WARNING = 80
+BATTERY_CYCLE_WARNING_RATIO = 0.8
+BATTERY_TEMPERATURE_WARNING = 40.0
+UPTIME_SUGGESTION_DAYS = 14
+TOP_PROCESS_COUNT = 5
+DISK_ENTRY_COUNT = 15
+LABEL_WIDTH = 14
+HEALTHY_CONDITIONS = {"Good", "Normal"}
+CONDITION_LABELS = {
+    "Good": "boa",
+    "Normal": "normal",
+    "Fair": "razoável",
+    "Poor": "ruim",
+    "Check Battery": "verificar bateria",
+    "Service Recommended": "manutenção recomendada",
+    "Replace Soon": "trocar em breve",
+    "Replace Now": "trocar agora",
+    "Service Battery": "levar para manutenção",
+}
+PRESSURE_LABELS = {1: "normal", 2: "alta", 4: "crítica"}
+IGNORED_PROCESSES = {"top", "ps"}
+
+
+class Palette:
+    def __init__(self, enabled):
+        self.enabled = enabled
+
+    def paint(self, text, code):
+        return f"\033[{code}m{text}\033[0m" if self.enabled else text
+
+    def bold(self, text):
+        return self.paint(text, "1")
+
+    def dim(self, text):
+        return self.paint(text, "2")
+
+    def green(self, text):
+        return self.paint(text, "32")
+
+    def yellow(self, text):
+        return self.paint(text, "33")
+
+    def red(self, text):
+        return self.paint(text, "31")
+
+    def cyan(self, text):
+        return self.paint(text, "36")
+
+    def level(self, text, level):
+        if level == "critical":
+            return self.red(text)
+        if level == "warning":
+            return self.yellow(text)
+        if level == "ok":
+            return self.green(text)
+        return self.dim(text)
+
+
+def run(arguments, timeout=20):
+    try:
+        completed = subprocess.run(arguments, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return b""
+    return completed.stdout
+
+
+def run_text(arguments, timeout=20):
+    return run(arguments, timeout).decode("utf-8", "replace")
+
+
+def sysctl(name):
+    return run_text(["sysctl", "-n", name]).strip()
+
+
+def sysctl_int(name):
+    value = sysctl(name)
+    return int(value) if value.isdigit() else 0
+
+
+def load_plist(data):
+    try:
+        return plistlib.loads(data)
+    except Exception:
+        return None
+
+
+def load_json(data):
+    try:
+        return json.loads(data)
+    except ValueError:
+        return None
+
+
+def decimal(value, digits=1):
+    return f"{value:.{digits}f}".replace(".", ",")
+
+
+def thousands(value):
+    return f"{int(value):,}".replace(",", ".")
+
+
+def storage_size(byte_count):
+    for unit, factor in (("TB", 1e12), ("GB", 1e9), ("MB", 1e6), ("KB", 1e3)):
+        if byte_count >= factor:
+            return f"{decimal(byte_count / factor)} {unit}"
+    return f"{int(byte_count)} B"
+
+
+def memory_size(byte_count):
+    for unit, factor in (("TB", 1024 ** 4), ("GB", GIB), ("MB", 1024 ** 2), ("KB", 1024)):
+        if byte_count >= factor:
+            return f"{decimal(byte_count / factor)} {unit}"
+    return f"{int(byte_count)} B"
+
+
+def duration(seconds):
+    minutes = int(seconds // 60)
+    days, minutes = divmod(minutes, 1440)
+    hours, minutes = divmod(minutes, 60)
+    if days:
+        return f"{days} {'dia' if days == 1 else 'dias'} e {hours} h"
+    if hours:
+        return f"{hours} h {minutes:02d} min"
+    return f"{minutes} min"
+
+
+def short_date(moment):
+    return moment.strftime("%d/%m %H:%M")
+
+
+def meter(ratio, width=24):
+    filled = max(0, min(width, round(ratio * width)))
+    return "█" * filled + "░" * (width - filled)
+
+
+def parse_percent(text):
+    match = re.search(r"(\d+(?:\.\d+)?)", str(text or ""))
+    return float(match.group(1)) if match else None
+
+
+def valid_minutes(value):
+    return value if isinstance(value, int) and 0 < value < 65535 else None
+
+
+def parse_boot_time(text):
+    match = re.search(r"sec = (\d+)", text)
+    return datetime.datetime.fromtimestamp(int(match.group(1))) if match else None
+
+
+def parse_top_memory(text):
+    match = re.match(r"([\d.]+)([BKMGT])", text)
+    if not match:
+        return 0
+    exponent = "BKMGT".index(match.group(2))
+    return int(float(match.group(1)) * 1024 ** exponent)
+
+
+def application_name(command):
+    bundle = re.search(r"([^/]+)\.app/", command)
+    if bundle:
+        return bundle.group(1)
+    return os.path.basename(command.rstrip("/")) or command
+
+
+def collect_hardware():
+    profile = load_json(run(["system_profiler", "SPHardwareDataType", "-json"])) or {}
+    item = (profile.get("SPHardwareDataType") or [{}])[0]
+    return {
+        "model": item.get("machine_name") or sysctl("hw.model"),
+        "chip": item.get("chip_type") or item.get("cpu_type") or sysctl("machdep.cpu.brand_string"),
+        "memory_bytes": sysctl_int("hw.memsize"),
+        "cores": sysctl_int("hw.ncpu"),
+        "performance_cores": sysctl_int("hw.perflevel0.physicalcpu"),
+        "efficiency_cores": sysctl_int("hw.perflevel1.physicalcpu"),
+        "os_version": run_text(["sw_vers", "-productVersion"]).strip(),
+        "os_build": run_text(["sw_vers", "-buildVersion"]).strip(),
+        "booted_at": parse_boot_time(sysctl("kern.boottime")),
+    }
+
+
+def collect_battery():
+    profile = load_json(run(["system_profiler", "SPPowerDataType", "-json"])) or {}
+    health, charge = {}, {}
+    for item in profile.get("SPPowerDataType") or []:
+        health = item.get("sppower_battery_health_info") or health
+        charge = item.get("sppower_battery_charge_info") or charge
+    registry = load_plist(run(["ioreg", "-rn", "AppleSmartBattery", "-a"]))
+    battery = registry[0] if isinstance(registry, list) and registry else {}
+    if not health and not battery:
+        return None
+    temperature = battery.get("Temperature")
+    return {
+        "health_percent": parse_percent(health.get("sppower_battery_health_maximum_capacity")),
+        "condition": health.get("sppower_battery_health"),
+        "cycles": health.get("sppower_battery_cycle_count", battery.get("CycleCount")),
+        "design_cycles": battery.get("DesignCycleCount9C") or 1000,
+        "charge_percent": charge.get("sppower_battery_state_of_charge", battery.get("CurrentCapacity")),
+        "charging": bool(battery.get("IsCharging")),
+        "fully_charged": bool(battery.get("FullyCharged")),
+        "external_power": bool(battery.get("ExternalConnected")),
+        "adapter_watts": (battery.get("AdapterDetails") or {}).get("Watts"),
+        "temperature": temperature / 100 if isinstance(temperature, int) and temperature > 0 else None,
+        "minutes_to_empty": valid_minutes(battery.get("AvgTimeToEmpty")),
+        "minutes_to_full": valid_minutes(battery.get("AvgTimeToFull")),
+        "design_capacity": battery.get("DesignCapacity"),
+        "full_charge_capacity": battery.get("NominalChargeCapacity") or battery.get("AppleRawMaxCapacity"),
+    }
+
+
+def collect_storage():
+    root = load_plist(run(["diskutil", "info", "-plist", "/"])) or {}
+    total = root.get("APFSContainerSize") or root.get("TotalSize") or 0
+    free = root.get("APFSContainerFree") or root.get("FreeSpace") or 0
+    stores = root.get("APFSPhysicalStores") or []
+    physical = stores[0].get("APFSPhysicalStore") if stores else root.get("ParentWholeDisk")
+    whole_disk = re.sub(r"s\d+$", "", physical or "")
+    device = (load_plist(run(["diskutil", "info", "-plist", whole_disk])) if whole_disk else None) or {}
+    return {
+        "name": root.get("VolumeName") or "disco interno",
+        "container": root.get("APFSContainerReference"),
+        "total": total,
+        "free": free,
+        "used": max(0, total - free),
+        "media": device.get("MediaName") or device.get("IORegistryEntryName"),
+        "smart": device.get("SMARTStatus") or root.get("SMARTStatus"),
+    }
+
+
+def collect_memory():
+    page_size = sysctl_int("hw.pagesize") or 16384
+    counts = {}
+    for line in run_text(["vm_stat"]).splitlines():
+        match = re.match(r'^"?([^":]+)"?:\s+(\d+)\.?$', line.strip())
+        if match:
+            counts[match.group(1)] = int(match.group(2))
+
+    def pages(name):
+        return counts.get(name, 0) * page_size
+
+    swap = {}
+    for key, amount in re.findall(r"(total|used|free) = ([\d.]+)M", sysctl("vm.swapusage")):
+        swap[key] = int(float(amount) * 1024 ** 2)
+    available = re.search(r"free percentage: (\d+)%", run_text(["memory_pressure"]))
+    app = max(0, pages("Anonymous pages") - pages("Pages purgeable"))
+    wired = pages("Pages wired down")
+    compressed = pages("Pages occupied by compressor")
+    return {
+        "total": sysctl_int("hw.memsize"),
+        "app": app,
+        "wired": wired,
+        "compressed": compressed,
+        "used": app + wired + compressed,
+        "cached": pages("File-backed pages") + pages("Pages purgeable"),
+        "pressure_level": sysctl_int("kern.memorystatus_vm_pressure_level"),
+        "available_percent": int(available.group(1)) if available else None,
+        "swap_total": swap.get("total", 0),
+        "swap_used": swap.get("used", 0),
+    }
+
+
+def process_groups():
+    names = {}
+    for line in run_text(["ps", "-Ao", "pid=,comm="]).splitlines():
+        parts = line.strip().split(None, 1)
+        if len(parts) == 2 and parts[0].isdigit():
+            names[int(parts[0])] = application_name(parts[1])
+    return names
+
+
+def collect_activity():
+    output = run_text(["top", "-l", "2", "-s", "1", "-stats", "pid,cpu,mem,command", "-o", "cpu"], timeout=30)
+    names = process_groups()
+    sample = output.split("Processes:")[-1]
+    usage = re.search(r"CPU usage:\s+([\d.]+)% user,\s+([\d.]+)% sys,\s+([\d.]+)% idle", sample)
+    groups = {}
+    in_table = False
+    for line in sample.splitlines():
+        if line.startswith("PID"):
+            in_table = True
+            continue
+        parts = line.split(None, 3)
+        if not in_table or len(parts) < 3 or not parts[0].isdigit():
+            continue
+        pid = int(parts[0])
+        name = names.get(pid) or (parts[3].strip() if len(parts) > 3 else str(pid))
+        if pid == os.getpid() or name in IGNORED_PROCESSES:
+            continue
+        group = groups.setdefault(name, {"name": name, "cpu": 0.0, "memory": 0, "count": 0})
+        group["cpu"] += float(parts[1])
+        group["memory"] += parse_top_memory(parts[2])
+        group["count"] += 1
+    load = [float(value) for value in re.findall(r"[\d.]+", sysctl("vm.loadavg"))[:3]]
+    thermal = run_text(["pmset", "-g", "therm"])
+    speed_limit = re.search(r"CPU_Speed_Limit\s*=\s*(\d+)", thermal)
+    return {
+        "user": float(usage.group(1)) if usage else None,
+        "system": float(usage.group(2)) if usage else None,
+        "idle": float(usage.group(3)) if usage else None,
+        "load": load,
+        "speed_limit": int(speed_limit.group(1)) if speed_limit else None,
+        "thermal_warning": bool(thermal.strip()) and "No thermal warning level has been recorded" not in thermal,
+        "by_memory": sorted(groups.values(), key=lambda group: group["memory"], reverse=True)[:TOP_PROCESS_COUNT],
+        "by_cpu": sorted(groups.values(), key=lambda group: group["cpu"], reverse=True)[:TOP_PROCESS_COUNT],
+    }
+
+
+def collect_updates():
+    try:
+        with open(SOFTWARE_UPDATE_PLIST, "rb") as handle:
+            data = plistlib.load(handle)
+    except Exception:
+        return None
+    names = []
+    for update in data.get("RecommendedUpdates") or []:
+        name = update.get("Display Name") or update.get("Identifier") or "?"
+        version = update.get("Display Version")
+        names.append(f"{name} {version}" if version and version not in name else name)
+    checked_at = data.get("LastSuccessfulDate")
+    if isinstance(checked_at, datetime.datetime):
+        checked_at = checked_at.replace(tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
+    return {"names": names, "checked_at": checked_at if isinstance(checked_at, datetime.datetime) else None}
+
+
+def collect_security():
+    firewall = re.search(r"State = (\d+)", run_text(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--getglobalstate"]))
+    destinations = run_text(["tmutil", "destinationinfo"])
+    backup_configured = bool(destinations.strip()) and "No destinations configured" not in destinations
+    latest_backup = None
+    if backup_configured:
+        stamp = re.search(r"(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})", run_text(["tmutil", "latestbackup"], timeout=30))
+        if stamp:
+            latest_backup = datetime.datetime(*[int(part) for part in stamp.groups()])
+    return {
+        "filevault": "FileVault is On" in run_text(["fdesetup", "status"]),
+        "sip": "enabled" in run_text(["csrutil", "status"]),
+        "gatekeeper": "assessments enabled" in run_text(["spctl", "--status"]),
+        "firewall": int(firewall.group(1)) > 0 if firewall else None,
+        "backup_configured": backup_configured,
+        "latest_backup": latest_backup,
+    }
+
+
+def collect_network():
+    route = run_text(["route", "-n", "get", "default"])
+    interface = re.search(r"interface:\s+(\S+)", route)
+    interface = interface.group(1) if interface else None
+    ports = {}
+    current_port = None
+    for line in run_text(["networksetup", "-listallhardwareports"]).splitlines():
+        if line.startswith("Hardware Port:"):
+            current_port = line.split(":", 1)[1].strip()
+        elif line.startswith("Device:") and current_port:
+            ports[line.split(":", 1)[1].strip()] = current_port
+    tailscale = None
+    command = next((path for path in TAILSCALE_COMMANDS if os.path.exists(path)), None)
+    if command:
+        status = load_json(run([command, "status", "--json"], timeout=10))
+        if status:
+            own = status.get("Self") or {}
+            peers = list((status.get("Peer") or {}).values())
+            tailscale = {
+                "running": status.get("BackendState") == "Running",
+                "online": bool(own.get("Online")),
+                "address": (own.get("TailscaleIPs") or [None])[0],
+                "peers_online": sum(1 for peer in peers if peer.get("Online")),
+                "peers_total": len(peers),
+            }
+    return {
+        "interface": interface,
+        "port": ports.get(interface or ""),
+        "address": run_text(["ipconfig", "getifaddr", interface]).strip() if interface else None,
+        "tailscale": tailscale,
+    }
+
+
+def directory_size(path, ignored=None):
+    arguments = ["du", "-skx"] + (["-I", ignored] if ignored else [])
+    output = run_text(arguments + [path], timeout=600)
+    match = re.match(r"(\d+)", output)
+    return int(match.group(1)) * 1024 if match else 0
+
+
+def user_temporary_root():
+    temporary = run_text(["getconf", "DARWIN_USER_TEMP_DIR"]).strip()
+    return os.path.dirname(temporary.rstrip("/")) if temporary else None
+
+
+def code_sign_clones(temporary_root):
+    found = []
+    clone_root = os.path.join(temporary_root, "X")
+    try:
+        containers = [entry for entry in os.scandir(clone_root) if entry.is_dir() and entry.name.endswith(".code_sign_clone")]
+    except OSError:
+        return found
+    for container in containers:
+        clones = [entry.path for entry in os.scandir(container.path) if entry.is_dir()]
+        if not clones:
+            continue
+        versions = set()
+        for clone in clones:
+            pattern = os.path.join(glob.escape(clone), "*", "Contents", "Frameworks", "*.framework", "Versions", "[0-9]*")
+            versions.update(os.path.basename(path) for path in glob.glob(pattern))
+        newest = max(clones, key=os.path.getmtime)
+        found.append({
+            "application": container.name[: -len(".code_sign_clone")],
+            "path": container.path,
+            "count": len(clones),
+            "real_bytes": directory_size(newest) * max(1, len(versions)),
+        })
+    return found
+
+
+def apfs_volume_usage(container_reference):
+    listing = load_plist(run(["diskutil", "apfs", "list", "-plist"])) or {}
+    usage = {}
+    for container in listing.get("Containers") or []:
+        if container.get("ContainerReference") != container_reference:
+            continue
+        for volume in container.get("Volumes") or []:
+            for role in volume.get("Roles") or ["Other"]:
+                usage[role] = usage.get(role, 0) + (volume.get("CapacityInUse") or 0)
+    return usage
+
+
+def collect_disk_usage(storage):
+    candidates = []
+    for base in (HOME, os.path.join(HOME, "Library")):
+        try:
+            entries = list(os.scandir(base))
+        except OSError:
+            continue
+        for entry in entries:
+            if base == HOME and entry.name == "Library":
+                continue
+            if entry.is_dir(follow_symlinks=False):
+                candidates.append(entry.path)
+    for path in ("/Applications", "/opt/homebrew", "/Library/Developer", "/usr/local", SYSTEM_ASSETS, "/Library/Updates", "/private/var/db"):
+        if os.path.isdir(path):
+            candidates.append(path)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        sizes = dict(zip(candidates, pool.map(directory_size, candidates)))
+    clones = []
+    temporary_root = user_temporary_root()
+    if temporary_root:
+        clones = code_sign_clones(temporary_root)
+        sizes[temporary_root] = directory_size(temporary_root, "code_sign_clone.*") + sum(clone["real_bytes"] for clone in clones)
+    measured_data = sum(sizes.values())
+    volumes = apfs_volume_usage(storage.get("container")) if storage else {}
+    system_bytes = sum(volumes.get(role, 0) for role in ("System", "Preboot", "Recovery", "Update"))
+    if system_bytes:
+        sizes[SYSTEM_VOLUMES_KEY] = system_bytes
+    if volumes.get("VM"):
+        sizes["/System/Volumes/VM"] = volumes["VM"]
+    if volumes.get("Data"):
+        unmeasured = max(0, volumes["Data"] - measured_data)
+    else:
+        unmeasured = max(0, storage["used"] - sum(sizes.values())) if storage else 0
+    largest = sorted(sizes.items(), key=lambda item: item[1], reverse=True)[:DISK_ENTRY_COUNT]
+    return {"largest": largest, "unmeasured": unmeasured, "clones": clones}
+
+
+def friendly_path(path):
+    labels = {
+        "/System/Volumes/VM": "memória virtual (swap)",
+        "/Library/Developer": "/Library/Developer (Xcode, CLT e simuladores)",
+        SYSTEM_ASSETS: "assets do sistema (simulador do iOS, Siri, idiomas)",
+        "/Library/Updates": "atualizações do macOS já baixadas",
+        "/private/var/db": "bancos internos do sistema (/private/var/db)",
+        SYSTEM_VOLUMES_KEY: "macOS (volumes do sistema, pré-boot e recuperação)",
+    }
+    if path in labels:
+        return labels[path]
+    if path.startswith("/private/var/folders") or path.startswith("/var/folders"):
+        return "temporários do usuário (/var/folders)"
+    return "~" + path[len(HOME):] if path.startswith(HOME) else path
+
+
+def assess(report):
+    findings = []
+    battery = report.get("battery")
+    if battery:
+        if battery["health_percent"] is not None and battery["health_percent"] < BATTERY_HEALTH_WARNING:
+            findings.append(("warning", f"Bateria com {round(battery['health_percent'])}% da capacidade original"))
+        if battery["condition"] and battery["condition"] not in HEALTHY_CONDITIONS:
+            findings.append(("warning", f"Bateria: condição {CONDITION_LABELS.get(battery['condition'], battery['condition'])}"))
+        if battery["cycles"] and battery["cycles"] >= battery["design_cycles"] * BATTERY_CYCLE_WARNING_RATIO:
+            findings.append(("warning", f"Bateria com {battery['cycles']} de {battery['design_cycles']} ciclos previstos"))
+        if battery["temperature"] and battery["temperature"] >= BATTERY_TEMPERATURE_WARNING:
+            findings.append(("warning", f"Bateria quente: {decimal(battery['temperature'])} °C"))
+    storage = report.get("storage")
+    if storage and storage["total"]:
+        free_ratio = storage["free"] / storage["total"]
+        if free_ratio < DISK_WARNING_RATIO:
+            level = "critical" if free_ratio < DISK_CRITICAL_RATIO else "warning"
+            findings.append((level, f"Disco quase cheio: {storage_size(storage['free'])} livres ({round(free_ratio * 100)}%); veja macscan --disk"))
+    memory = report.get("memory")
+    if memory:
+        if memory["pressure_level"] >= 4:
+            findings.append(("critical", "Memória sob pressão crítica"))
+        elif memory["pressure_level"] >= 2:
+            findings.append(("warning", "Memória sob pressão alta"))
+        if memory["swap_used"] >= SWAP_WARNING_BYTES:
+            findings.append(("warning", f"Swap alta: {memory_size(memory['swap_used'])} em uso; fechar apps pesados ou reiniciar libera"))
+    activity = report.get("activity")
+    hardware = report.get("hardware")
+    if activity and hardware and activity["load"] and hardware["cores"] and activity["load"][1] > hardware["cores"]:
+        findings.append(("warning", f"CPU sobrecarregada: carga média {decimal(activity['load'][1], 2)} para {hardware['cores']} núcleos"))
+    if activity and (activity["thermal_warning"] or (activity["speed_limit"] is not None and activity["speed_limit"] < 100)):
+        findings.append(("warning", "O macOS registrou limitação térmica da CPU"))
+    security = report.get("security")
+    if security:
+        if not security["filevault"]:
+            findings.append(("critical", "FileVault desligado: o disco não está criptografado"))
+        if not security["sip"]:
+            findings.append(("warning", "Proteção de integridade do sistema (SIP) desligada"))
+        if not security["gatekeeper"]:
+            findings.append(("warning", "Gatekeeper desligado"))
+        if security["firewall"] is False:
+            findings.append(("warning", "Firewall do macOS desligado"))
+        if not security["backup_configured"]:
+            findings.append(("warning", "Sem backup: o Time Machine não tem destino configurado"))
+    updates = report.get("updates")
+    if updates and updates["names"]:
+        count = len(updates["names"])
+        findings.append(("info", f"{count} {'atualização disponível' if count == 1 else 'atualizações disponíveis'}"))
+    if hardware and hardware["booted_at"]:
+        uptime_days = (datetime.datetime.now() - hardware["booted_at"]).days
+        if uptime_days >= UPTIME_SUGGESTION_DAYS:
+            findings.append(("info", f"Ligado há {uptime_days} dias sem reiniciar"))
+    order = {"critical": 0, "warning": 1, "info": 2}
+    return sorted(findings, key=lambda finding: order[finding[0]])
+
+
+class Renderer:
+    def __init__(self, palette, width):
+        self.palette = palette
+        self.width = width
+        self.lines = []
+        self.sections = [{"title": "", "subtitle": None, "rows": []}]
+        self.machine = ""
+
+    def emit(self, text=""):
+        self.lines.append(text)
+
+    def record(self, label, value):
+        self.sections[-1]["rows"].append({"label": label, "value": value})
+
+    def section(self, title, subtitle=None):
+        self.emit()
+        self.sections.append({"title": title, "subtitle": subtitle, "rows": []})
+        heading = self.palette.bold(self.palette.cyan(title))
+        self.emit(heading + (f"  {self.palette.dim(subtitle)}" if subtitle else ""))
+
+    def row(self, label, value):
+        self.record(label, value)
+        self.emit(f"  {label.ljust(LABEL_WIDTH)} {value}")
+
+    def detail(self, value):
+        self.record("", value)
+        self.emit(f"  {' ' * LABEL_WIDTH} {value}")
+
+
+def render_header(output, palette, report):
+    hardware = report.get("hardware") or {}
+    memory = report.get("memory") or {}
+    parts = [hardware.get("model"), hardware.get("chip")]
+    if memory.get("total"):
+        parts.append(f"{round(memory['total'] / GIB)} GB")
+    if hardware.get("os_version"):
+        parts.append(f"macOS {hardware['os_version']}" + (f" ({hardware['os_build']})" if hardware.get("os_build") else ""))
+    output.machine = " · ".join(part for part in parts if part)
+    output.emit(palette.bold("macscan") + "  " + output.machine)
+    output.emit(palette.dim(datetime.datetime.now().strftime("%d/%m/%Y %H:%M")))
+
+
+def render_summary(output, palette, findings):
+    output.emit()
+    serious = [finding for finding in findings if finding[0] in ("critical", "warning")]
+    if not serious:
+        output.emit(palette.green("● Tudo certo"))
+    else:
+        worst = "critical" if any(finding[0] == "critical" for finding in serious) else "warning"
+        count = len(serious)
+        output.emit(palette.level(f"● {count} {'ponto' if count == 1 else 'pontos'} de atenção", worst))
+    for level, message in findings:
+        marker = "○" if level == "info" else "●"
+        output.emit(f"  {palette.level(marker, level)} {message}")
+
+
+def render_battery(output, palette, battery):
+    output.section("BATERIA")
+    if not battery:
+        output.row("Bateria", palette.dim("este Mac não tem bateria"))
+        return
+    health = battery["health_percent"]
+    condition = CONDITION_LABELS.get(battery["condition"], battery["condition"] or "?")
+    health_level = "warning" if (health is not None and health < BATTERY_HEALTH_WARNING) or (battery["condition"] and battery["condition"] not in HEALTHY_CONDITIONS) else "ok"
+    health_text = f"{round(health)}% da capacidade original" if health is not None else "sem leitura"
+    output.row("Saúde", palette.level(health_text, health_level) + f" · condição {condition}")
+    if battery["full_charge_capacity"] and battery["design_capacity"]:
+        output.detail(palette.dim(f"carga cheia hoje {thousands(battery['full_charge_capacity'])} mAh, de fábrica {thousands(battery['design_capacity'])} mAh"))
+    if battery["cycles"] is not None:
+        ratio = battery["cycles"] / battery["design_cycles"]
+        cycle_level = "warning" if ratio >= BATTERY_CYCLE_WARNING_RATIO else "ok"
+        output.row("Ciclos", palette.level(f"{battery['cycles']} de {battery['design_cycles']}", cycle_level) + f" previstos ({round(ratio * 100)}%)")
+    state = []
+    if battery["charge_percent"] is not None:
+        state.append(f"{battery['charge_percent']}%")
+    if battery["charging"]:
+        state.append("carregando" + (f", cheia em {duration(battery['minutes_to_full'] * 60)}" if battery["minutes_to_full"] else ""))
+    elif battery["fully_charged"]:
+        state.append("carregada")
+    if battery["external_power"]:
+        state.append("na tomada" + (f" ({battery['adapter_watts']} W)" if battery["adapter_watts"] else ""))
+    else:
+        state.append("na bateria" + (f", resta {duration(battery['minutes_to_empty'] * 60)}" if battery["minutes_to_empty"] else ""))
+    output.row("Carga", " · ".join(state))
+    if battery["temperature"] is not None:
+        temperature_level = "warning" if battery["temperature"] >= BATTERY_TEMPERATURE_WARNING else "ok"
+        output.row("Temperatura", palette.level(f"{decimal(battery['temperature'])} °C", temperature_level))
+
+
+def render_storage(output, palette, storage, security):
+    if not storage or not storage["total"]:
+        output.section("ARMAZENAMENTO")
+        output.row("Disco", palette.dim("sem leitura"))
+        return
+    output.section("ARMAZENAMENTO", storage["name"])
+    ratio = storage["used"] / storage["total"]
+    free_ratio = 1 - ratio
+    level = "critical" if free_ratio < DISK_CRITICAL_RATIO else "warning" if free_ratio < DISK_WARNING_RATIO else "ok"
+    output.row("Usado", f"{storage_size(storage['used'])} de {storage_size(storage['total'])} ({round(ratio * 100)}%)  " + palette.level(meter(ratio), level))
+    output.row("Livre", palette.level(storage_size(storage["free"]), level))
+    details = [storage["media"] or "SSD"]
+    if storage["smart"]:
+        details.append("SMART " + ("verificado" if storage["smart"] == "Verified" else storage["smart"]))
+    if security:
+        details.append("FileVault " + ("ligado" if security["filevault"] else palette.red("desligado")))
+    output.row("Disco", " · ".join(details))
+
+
+def render_memory(output, palette, memory):
+    if not memory or not memory["total"]:
+        output.section("MEMÓRIA")
+        output.row("Memória", palette.dim("sem leitura"))
+        return
+    output.section("MEMÓRIA", f"{round(memory['total'] / GIB)} GB")
+    ratio = memory["used"] / memory["total"]
+    pressure_level = "critical" if memory["pressure_level"] >= 4 else "warning" if memory["pressure_level"] >= 2 else "ok"
+    output.row("Em uso", f"{memory_size(memory['used'])} ({round(ratio * 100)}%)  " + palette.level(meter(min(ratio, 1)), pressure_level))
+    output.detail(palette.dim(f"apps {memory_size(memory['app'])} · fixa {memory_size(memory['wired'])} · comprimida {memory_size(memory['compressed'])}"))
+    output.row("Cache", f"{memory_size(memory['cached'])} de arquivos " + palette.dim("(liberado quando faltar)"))
+    pressure = palette.level(PRESSURE_LABELS.get(memory["pressure_level"], "desconhecida"), pressure_level)
+    if memory["available_percent"] is not None:
+        pressure += palette.dim(f" · o macOS considera {memory['available_percent']}% disponível")
+    output.row("Pressão", pressure)
+    if memory["swap_total"]:
+        swap_level = "warning" if memory["swap_used"] >= SWAP_WARNING_BYTES else "ok"
+        output.row("Swap", palette.level(memory_size(memory["swap_used"]), swap_level) + f" de {memory_size(memory['swap_total'])}")
+    else:
+        output.row("Swap", "sem uso")
+
+
+def render_cpu(output, palette, activity, hardware):
+    subtitle = hardware.get("chip") or ""
+    if hardware.get("performance_cores") and hardware.get("efficiency_cores"):
+        subtitle += f" · {hardware['cores']} núcleos ({hardware['performance_cores']} de desempenho, {hardware['efficiency_cores']} de eficiência)"
+    elif hardware.get("cores"):
+        subtitle += f" · {hardware['cores']} núcleos"
+    output.section("CPU", subtitle.strip(" ·"))
+    if not activity:
+        output.row("CPU", palette.dim("sem leitura"))
+        return
+    if activity["idle"] is not None:
+        busy = 100 - activity["idle"]
+        output.row("Uso agora", f"{round(busy)}% " + palette.dim(f"(apps {round(activity['user'])}%, sistema {round(activity['system'])}%)"))
+    if activity["load"]:
+        overloaded = hardware.get("cores") and len(activity["load"]) > 1 and activity["load"][1] > hardware["cores"]
+        load_text = " · ".join(decimal(value, 2) for value in activity["load"])
+        output.row("Carga média", palette.level(load_text, "warning" if overloaded else "ok") + palette.dim(" (1, 5 e 15 min)"))
+    throttled = activity["thermal_warning"] or (activity["speed_limit"] is not None and activity["speed_limit"] < 100)
+    output.row("Temperatura", palette.yellow("limitação térmica registrada") if throttled else palette.green("sem alerta térmico"))
+
+
+def render_processes(output, palette, activity):
+    if not activity or not activity["by_memory"]:
+        return
+    output.section("PROCESSOS", "somados por app")
+    name_width = 26
+    column = 3 + name_width + 1 + 8
+
+    def label(group):
+        suffix = f" ({group['count']})" if group["count"] > 1 else ""
+        room = name_width - len(suffix)
+        name = group["name"] if len(group["name"]) <= room else group["name"][:room - 1] + "…"
+        return name + suffix
+
+    memory_lines = [f"{index}  {label(group).ljust(name_width)} {memory_size(group['memory']).rjust(8)}" for index, group in enumerate(activity["by_memory"], 1)]
+    cpu_lines = [f"{index}  {label(group).ljust(name_width)} {(decimal(group['cpu']) + '%').rjust(8)}" for index, group in enumerate(activity["by_cpu"], 1)]
+    for index, line in enumerate(memory_lines):
+        output.record("Mais memória" if index == 0 else "", line)
+    for index, line in enumerate(cpu_lines):
+        output.record("Mais CPU agora" if index == 0 else "", line)
+    if output.width >= 2 * column + 6:
+        output.emit("  " + palette.dim("Mais memória".ljust(column + 4)) + palette.dim("Mais CPU agora"))
+        for memory_line, cpu_line in zip(memory_lines, cpu_lines):
+            output.emit("  " + memory_line.ljust(column + 4) + cpu_line)
+    else:
+        output.emit("  " + palette.dim("Mais memória"))
+        for memory_line in memory_lines:
+            output.emit("  " + memory_line)
+        output.emit("  " + palette.dim("Mais CPU agora"))
+        for cpu_line in cpu_lines:
+            output.emit("  " + cpu_line)
+
+
+def render_system(output, palette, hardware, updates):
+    output.section("SISTEMA")
+    if hardware.get("booted_at"):
+        uptime = datetime.datetime.now() - hardware["booted_at"]
+        output.row("Ligado há", f"{duration(uptime.total_seconds())} " + palette.dim(f"(desde {short_date(hardware['booted_at'])})"))
+    if updates is None:
+        output.row("Atualizações", palette.dim("sem leitura"))
+        return
+    checked = palette.dim(f" (verificado em {short_date(updates['checked_at'])})") if updates["checked_at"] else ""
+    if not updates["names"]:
+        output.row("Atualizações", palette.green("nenhuma pendente") + checked)
+        return
+    output.row("Atualizações", palette.yellow(f"{len(updates['names'])} disponíveis") + checked)
+    for name in updates["names"]:
+        output.detail(palette.dim("· ") + name)
+
+
+def render_security(output, palette, security):
+    output.section("SEGURANÇA")
+    if not security:
+        output.row("Segurança", palette.dim("sem leitura"))
+        return
+
+    def flag(name, enabled, missing_level="warning"):
+        if enabled is None:
+            return f"{name} {palette.dim('?')}"
+        return f"{name} " + (palette.green("ligado") if enabled else palette.level("desligado", missing_level))
+
+    protections = [
+        flag("FileVault", security["filevault"], "critical"),
+        flag("SIP", security["sip"]),
+        flag("Gatekeeper", security["gatekeeper"]),
+        flag("Firewall", security["firewall"]),
+    ]
+    if output.width >= 90:
+        output.row("Proteções", " · ".join(protections))
+    else:
+        output.row("Proteções", " · ".join(protections[:2]))
+        output.detail(" · ".join(protections[2:]))
+    if not security["backup_configured"]:
+        output.row("Backup", palette.yellow("Time Machine sem destino configurado"))
+    elif security["latest_backup"]:
+        age = datetime.datetime.now() - security["latest_backup"]
+        output.row("Backup", f"último Time Machine há {duration(age.total_seconds())} " + palette.dim(f"({short_date(security['latest_backup'])})"))
+    else:
+        output.row("Backup", "Time Machine configurado " + palette.dim("(destino não montado agora)"))
+
+
+def render_network(output, palette, network):
+    output.section("REDE")
+    if not network or not network["interface"]:
+        output.row("Conexão", palette.yellow("sem rota padrão (offline?)"))
+    else:
+        port = network["port"] or network["interface"]
+        output.row("Conexão", f"{port} ({network['interface']})" + (f" · {network['address']}" if network["address"] else ""))
+    tailscale = (network or {}).get("tailscale")
+    if tailscale:
+        if tailscale["running"] and tailscale["online"]:
+            output.row("Tailscale", palette.green("online") + f" · {tailscale['address']} · {tailscale['peers_online']} de {tailscale['peers_total']} máquinas online")
+        else:
+            output.row("Tailscale", palette.yellow("desconectado"))
+
+
+def render_disk_usage(output, palette, usage):
+    output.section("PASTAS QUE MAIS OCUPAM", "pastas protegidas sem acesso ficam de fora")
+    if not usage["largest"]:
+        output.row("Pastas", palette.dim("sem leitura"))
+        return
+    for path, size in usage["largest"]:
+        output.record(storage_size(size), friendly_path(path))
+        output.emit(f"  {storage_size(size).rjust(9)}  {friendly_path(path)}")
+    if usage["unmeasured"]:
+        output.emit(palette.dim(f"  {storage_size(usage['unmeasured']).rjust(9)}  resto dos seus dados (pastas menores e áreas que só o sistema lê)"))
+    output.emit(palette.dim("  Tamanhos pelo du: arquivos clonados no APFS podem aparecer em mais de uma pasta."))
+    for clone in usage.get("clones") or []:
+        if clone["count"] < 2:
+            continue
+        output.emit()
+        output.emit(f"  {palette.yellow('●')} {clone['count']} cópias de assinatura do app {clone['application']} esquecidas em /var/folders")
+        output.detail(palette.dim(f"ocupam de verdade uns {storage_size(clone['real_bytes'])}; com o app fechado, podem ser apagadas:"))
+        output.detail(palette.dim(f"rm -rf '{clone['path']}'/*"))
+
+
+def safely(collector, *arguments):
+    try:
+        return collector(*arguments)
+    except Exception:
+        return None
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        prog="macscan",
+        description="Mostra como está o Mac: bateria, armazenamento, memória, CPU, processos, segurança e rede.",
+    )
+    parser.add_argument("-d", "--disk", action="store_true", help="lista também as pastas que mais ocupam espaço (leva mais tempo)")
+    parser.add_argument("--no-color", action="store_true", help="saída sem cores")
+    parser.add_argument("--json", action="store_true", help="saída em JSON (usada pelo Toolbelt)")
+    return parser.parse_args()
+
+
+def main():
+    arguments = parse_arguments()
+    palette = Palette(sys.stdout.isatty() and not arguments.no_color and not arguments.json and "NO_COLOR" not in os.environ)
+    width = shutil.get_terminal_size((100, 24)).columns
+    collectors = {
+        "hardware": collect_hardware,
+        "battery": collect_battery,
+        "storage": collect_storage,
+        "memory": collect_memory,
+        "updates": collect_updates,
+        "security": collect_security,
+        "network": collect_network,
+    }
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(collectors)) as pool:
+        futures = {name: pool.submit(safely, collector) for name, collector in collectors.items()}
+        report = {name: future.result() for name, future in futures.items()}
+    report["activity"] = safely(collect_activity)
+    if arguments.disk:
+        report["disk_usage"] = safely(collect_disk_usage, report.get("storage"))
+    hardware = report.get("hardware") or {}
+    output = Renderer(palette, width)
+    render_header(output, palette, report)
+    render_summary(output, palette, assess(report))
+    render_battery(output, palette, report.get("battery"))
+    render_storage(output, palette, report.get("storage"), report.get("security"))
+    render_memory(output, palette, report.get("memory"))
+    render_cpu(output, palette, report.get("activity"), hardware)
+    render_processes(output, palette, report.get("activity"))
+    render_system(output, palette, hardware, report.get("updates"))
+    render_security(output, palette, report.get("security"))
+    render_network(output, palette, report.get("network"))
+    if report.get("disk_usage"):
+        render_disk_usage(output, palette, report["disk_usage"])
+    if arguments.json:
+        findings = [{"level": level, "text": text} for level, text in assess(report)]
+        sections = [section for section in output.sections if section["title"] or section["rows"]]
+        print(json.dumps({"generatedAt": datetime.datetime.now().isoformat(), "machine": output.machine, "findings": findings, "sections": sections}, ensure_ascii=False))
+        sys.stdout.flush()
+        return
+    print("\n".join(output.lines))
+    sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except BrokenPipeError:
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(1)
