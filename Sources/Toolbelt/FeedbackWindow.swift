@@ -9,8 +9,8 @@ enum FeedbackKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .bug: return "Problema"
-        case .suggestion: return "Sugestão"
+        case .bug: return String(localized: "Problema")
+        case .suggestion: return String(localized: "Sugestão")
         }
     }
 
@@ -99,7 +99,7 @@ final class FeedbackWindowController: NSObject, NSWindowDelegate {
         model.enabledModules = enabledModules
         model.onFinish = { [weak self] in self?.window?.close() }
         let window = NSWindow(contentViewController: NSHostingController(rootView: FeedbackView(model: model)))
-        window.title = "Relatar ao desenvolvedor"
+        window.title = String(localized: "Relatar ao desenvolvedor")
         window.styleMask = [.titled, .closable, .resizable]
         window.isReleasedWhenClosed = false
         window.delegate = self

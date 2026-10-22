@@ -18,9 +18,9 @@ struct SystemSnapshot: Equatable {
 
     var pressureTitle: String {
         switch pressureLevel {
-        case 4: return "crítica"
-        case 2: return "alta"
-        default: return "normal"
+        case 4: return String(localized: "crítica")
+        case 2: return String(localized: "alta")
+        default: return String(localized: "normal")
         }
     }
 }
@@ -85,10 +85,12 @@ enum SystemMetrics {
 }
 
 enum ByteFormat {
+    private static let usesDecimalComma = Bundle.main.preferredLocalizations.first?.hasPrefix("pt") ?? true
+
     static func memory(_ bytes: UInt64) -> String {
         let gigabytes = Double(bytes) / 1_073_741_824
         if gigabytes >= 1 {
-            return String(format: "%.1f GB", gigabytes).replacingOccurrences(of: ".", with: ",")
+            return withDecimalSeparator(String(format: "%.1f GB", gigabytes))
         }
         return String(format: "%.0f MB", Double(bytes) / 1_048_576)
     }
@@ -98,6 +100,10 @@ enum ByteFormat {
         if gigabytes >= 100 {
             return String(format: "%.0f GB", gigabytes)
         }
-        return String(format: "%.1f GB", gigabytes).replacingOccurrences(of: ".", with: ",")
+        return withDecimalSeparator(String(format: "%.1f GB", gigabytes))
+    }
+
+    private static func withDecimalSeparator(_ text: String) -> String {
+        usesDecimalComma ? text.replacingOccurrences(of: ".", with: ",") : text
     }
 }

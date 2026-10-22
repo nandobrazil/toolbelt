@@ -3,8 +3,8 @@ import UserNotifications
 
 final class SystemMonitorModule: NSObject, ToolbeltModule, NSMenuDelegate {
     let identifier = "systemMonitor"
-    let title = "Monitor do sistema"
-    let summary = "RAM, swap e disco na barra, alertas quando apertar e o relatório completo do macscan."
+    let title = String(localized: "Monitor do sistema")
+    let summary = String(localized: "RAM, swap e disco na barra, alertas quando apertar e o relatório completo do macscan.")
     let symbolName = "gauge.with.dots.needle.33percent"
 
     private enum Alert: String {
@@ -126,7 +126,7 @@ final class SystemMonitorModule: NSObject, ToolbeltModule, NSMenuDelegate {
         case 1: color = .systemOrange
         default: color = .labelColor
         }
-        let symbol = NSImage(systemSymbolName: "memorychip", accessibilityDescription: "Monitor do sistema")?
+        let symbol = NSImage(systemSymbolName: "memorychip", accessibilityDescription: String(localized: "Monitor do sistema"))?
             .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 12, weight: .medium))
         if warningLevel > 0 {
             button.image = symbol?.withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [color]))
@@ -142,28 +142,28 @@ final class SystemMonitorModule: NSObject, ToolbeltModule, NSMenuDelegate {
                 .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
             ]
         )
-        button.toolTip = "RAM \(ByteFormat.memory(snapshot.memoryUsed)) de \(ByteFormat.memory(snapshot.memoryTotal)) · disco livre \(ByteFormat.storage(snapshot.diskFree))"
+        button.toolTip = String(localized: "RAM \(ByteFormat.memory(snapshot.memoryUsed)) de \(ByteFormat.memory(snapshot.memoryTotal)) · disco livre \(ByteFormat.storage(snapshot.diskFree))")
     }
 
     private func rebuildMenu() {
         menu.removeAllItems()
-        menu.addItem(sectionHeader("Memória"))
-        menu.addItem(disabledMenuItem("Em uso \(ByteFormat.memory(snapshot.memoryUsed)) de \(ByteFormat.memory(snapshot.memoryTotal)) (\(Int((snapshot.memoryUsedRatio * 100).rounded()))%)"))
-        menu.addItem(disabledMenuItem("     apps \(ByteFormat.memory(snapshot.memoryApp)) · fixa \(ByteFormat.memory(snapshot.memoryWired)) · comprimida \(ByteFormat.memory(snapshot.memoryCompressed))"))
-        menu.addItem(disabledMenuItem("     cache \(ByteFormat.memory(snapshot.memoryCached)) (liberado quando faltar)"))
-        menu.addItem(disabledMenuItem("Pressão \(snapshot.pressureTitle)"))
-        menu.addItem(disabledMenuItem("Swap \(ByteFormat.memory(snapshot.swapUsed)) de \(ByteFormat.memory(snapshot.swapTotal))"))
+        menu.addItem(sectionHeader(String(localized: "Memória")))
+        menu.addItem(disabledMenuItem(String(localized: "Em uso \(ByteFormat.memory(snapshot.memoryUsed)) de \(ByteFormat.memory(snapshot.memoryTotal)) (\(Int((snapshot.memoryUsedRatio * 100).rounded()))%)")))
+        menu.addItem(disabledMenuItem(String(localized: "     apps \(ByteFormat.memory(snapshot.memoryApp)) · fixa \(ByteFormat.memory(snapshot.memoryWired)) · comprimida \(ByteFormat.memory(snapshot.memoryCompressed))")))
+        menu.addItem(disabledMenuItem(String(localized: "     cache \(ByteFormat.memory(snapshot.memoryCached)) (liberado quando faltar)")))
+        menu.addItem(disabledMenuItem(String(localized: "Pressão \(snapshot.pressureTitle)")))
+        menu.addItem(disabledMenuItem(String(localized: "Swap \(ByteFormat.memory(snapshot.swapUsed)) de \(ByteFormat.memory(snapshot.swapTotal))")))
         menu.addItem(.separator())
-        menu.addItem(sectionHeader("Disco"))
-        menu.addItem(disabledMenuItem("Livre \(ByteFormat.storage(snapshot.diskFree)) de \(ByteFormat.storage(snapshot.diskTotal)) (\(Int((snapshot.diskFreeRatio * 100).rounded()))%)"))
+        menu.addItem(sectionHeader(String(localized: "Disco")))
+        menu.addItem(disabledMenuItem(String(localized: "Livre \(ByteFormat.storage(snapshot.diskFree)) de \(ByteFormat.storage(snapshot.diskTotal)) (\(Int((snapshot.diskFreeRatio * 100).rounded()))%)")))
         menu.addItem(.separator())
-        menu.addItem(ActionMenuItem(title: "Relatório completo (macscan)…") { [weak self] in
+        menu.addItem(ActionMenuItem(title: String(localized: "Relatório completo (macscan)…")) { [weak self] in
             self?.onOpenReport?()
         })
-        menu.addItem(ActionMenuItem(title: "Abrir o Monitor de Atividade") {
+        menu.addItem(ActionMenuItem(title: String(localized: "Abrir o Monitor de Atividade")) {
             NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app"))
         })
-        menu.addItem(ActionMenuItem(title: "Configurar…") { [weak self] in
+        menu.addItem(ActionMenuItem(title: String(localized: "Configurar…")) { [weak self] in
             self?.onOpenSettings?()
         })
     }
@@ -180,19 +180,19 @@ final class SystemMonitorModule: NSObject, ToolbeltModule, NSMenuDelegate {
             .disk,
             isActive: diskPercent < Double(current.diskWarningPercent),
             isCleared: diskPercent >= Double(current.diskWarningPercent) + 2,
-            message: "Disco quase cheio: \(ByteFormat.storage(snapshot.diskFree)) livres (\(Int(diskPercent.rounded()))%)."
+            message: String(localized: "Disco quase cheio: \(ByteFormat.storage(snapshot.diskFree)) livres (\(Int(diskPercent.rounded()))%).")
         )
         update(
             .swap,
             isActive: snapshot.swapUsed >= swapLimit,
             isCleared: snapshot.swapUsed < swapLimit * 3 / 4,
-            message: "Swap alta: \(ByteFormat.memory(snapshot.swapUsed)) em uso. Fechar apps pesados ou reiniciar libera."
+            message: String(localized: "Swap alta: \(ByteFormat.memory(snapshot.swapUsed)) em uso. Fechar apps pesados ou reiniciar libera.")
         )
         update(
             .pressure,
             isActive: snapshot.pressureLevel >= 2,
             isCleared: snapshot.pressureLevel < 2,
-            message: "Memória sob pressão \(snapshot.pressureTitle)."
+            message: String(localized: "Memória sob pressão \(snapshot.pressureTitle).")
         )
     }
 

@@ -2,12 +2,12 @@ import AppKit
 
 final class AppSwitcherModule: ToolbeltModule {
     let identifier = "appSwitcher"
-    let title = "Alternar janelas"
-    let summary = "⌥⇥ mostra todas as janelas abertas e troca entre elas, como o AltTab."
+    let title = String(localized: "Alternar janelas")
+    let summary = String(localized: "⌥⇥ mostra todas as janelas abertas e troca entre elas, como o AltTab.")
     let symbolName = "rectangle.on.rectangle"
     let requiresAccessibility = true
 
-    private static let keyHints = "W fechar · M minimizar · H esconder app · Q fechar app · / buscar"
+    private static let keyHints = String(localized: "W fechar · M minimizar · H esconder app · Q fechar app · / buscar")
     private static let cachedThumbnailSize = CGSize(width: 204, height: 130)
 
     private let panel = SwitcherPanel()
@@ -156,7 +156,7 @@ final class AppSwitcherModule: ToolbeltModule {
     private func render(capturingLiveThumbnails: Bool) {
         let footer: String
         if isSearching {
-            footer = query.isEmpty ? "Digite para buscar · ⏎ trocar · ⎋ fechar" : "Buscar: \(query)  ·  ⏎ trocar · ⌫ apagar · ⎋ fechar"
+            footer = query.isEmpty ? String(localized: "Digite para buscar · ⏎ trocar · ⎋ fechar") : String(localized: "Buscar: \(query)  ·  ⏎ trocar · ⌫ apagar · ⎋ fechar")
         } else {
             footer = settings.showsKeyHints ? Self.keyHints : ""
         }
@@ -167,7 +167,7 @@ final class AppSwitcherModule: ToolbeltModule {
             showsThumbnails: showsThumbnails,
             cachedThumbnails: thumbnailCache.all,
             footer: footer,
-            emptyMessage: isSearching ? "Nada encontrado para “\(query)”" : nil,
+            emptyMessage: isSearching ? String(localized: "Nada encontrado para “\(query)”") : nil,
             capturesLiveThumbnails: capturingLiveThumbnails
         ) { [weak self] identifier, image in
             self?.thumbnailCache.store(image, for: identifier)

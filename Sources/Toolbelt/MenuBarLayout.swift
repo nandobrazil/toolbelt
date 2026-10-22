@@ -30,8 +30,8 @@ enum MenuBarMoveOutcome {
 
     var message: String {
         switch self {
-        case .moved(let title): return "\(title) foi movido."
-        case .unchanged: return "Esse ícone já estava nesse lugar."
+        case .moved(let title): return String(localized: "\(title) foi movido.")
+        case .unchanged: return String(localized: "Esse ícone já estava nesse lugar.")
         case .failed(let reason): return reason
         }
     }
@@ -55,17 +55,17 @@ enum MenuBarItemMover {
         let extras = MenuBarExtras.all()
         let identifiers = MenuBarExtras.identifiers(for: extras)
         guard let sourceIndex = identifiers.firstIndex(of: id) else {
-            return .failed("Não achei esse ícone na barra agora. A lista foi atualizada; tente de novo.")
+            return .failed(String(localized: "Não achei esse ícone na barra agora. A lista foi atualizada; tente de novo."))
         }
         let source = extras[sourceIndex]
         guard source.isMovable else {
-            return .failed("O macOS não deixa mover \(source.title).")
+            return .failed(String(localized: "O macOS não deixa mover \(source.title)."))
         }
         guard let screen = NSScreen.screens.first, isOnMenuBar(source.frame, of: screen) else {
-            return .failed("\(source.title) não cabe na barra agora (está fora da tela). Esconda outro ícone antes ou use o modo organizar.")
+            return .failed(String(localized: "\(source.title) não cabe na barra agora (está fora da tela). Esconda outro ícone antes ou use o modo organizar."))
         }
         guard let destination = destination(for: target, extras: extras, identifiers: identifiers, separatorFrame: separatorFrame()) else {
-            return .failed("Não achei o lugar de destino na barra. A lista foi atualizada; tente de novo.")
+            return .failed(String(localized: "Não achei o lugar de destino na barra. A lista foi atualizada; tente de novo."))
         }
         let isRightOfSource = destination.edge > source.frame.minX
         if isRightOfSource && abs(destination.edge - source.frame.maxX) <= adjacencyTolerance {
@@ -80,7 +80,7 @@ enum MenuBarItemMover {
         let isUnderNotch = MenuBarExtras.notchRange()?.contains(start.x) ?? false
         guard MenuBarExtras.owner(at: start) == source.processIdentifier || isUnderNotch else {
             NSLog("Toolbelt: menu bar move aborted, \(source.title) is not under \(start)")
-            return .failed("\(source.title) não estava onde eu esperava. Nada foi clicado; tente de novo.")
+            return .failed(String(localized: "\(source.title) não estava onde eu esperava. Nada foi clicado; tente de novo."))
         }
 
         NSLog("Toolbelt: moving menu bar item \(source.title) from \(Int(start.x)) to \(Int(end.x))")
@@ -121,10 +121,10 @@ enum MenuBarItemMover {
     private static func verify(source: MenuBarExtra, destination: Destination, separatorFrame: CGRect?) -> MenuBarMoveOutcome {
         let extras = MenuBarExtras.all()
         guard let moved = extras.first(where: { CFEqual($0.element, source.element) }) else {
-            return .failed("\(source.title) sumiu da barra durante o movimento. Confira a barra e tente de novo.")
+            return .failed(String(localized: "\(source.title) sumiu da barra durante o movimento. Confira a barra e tente de novo."))
         }
         guard abs(moved.frame.minX - source.frame.minX) > 1 else {
-            return .failed("O macOS não deixou mover \(source.title). Nada mudou; ainda dá para usar o modo organizar (⌥ clique no cinto).")
+            return .failed(String(localized: "O macOS não deixou mover \(source.title). Nada mudou; ainda dá para usar o modo organizar (⌥ clique no cinto)."))
         }
         let expectedEdge: CGFloat?
         if destination.isSeparator {
@@ -136,7 +136,7 @@ enum MenuBarItemMover {
         }
         if let expectedEdge, abs(expectedEdge - moved.frame.maxX) > adjacencyTolerance {
             NSLog("Toolbelt: menu bar item \(source.title) ended at \(Int(moved.frame.maxX)), expected \(Int(expectedEdge))")
-            return .failed("\(source.title) se mexeu, mas não ficou exatamente onde você soltou. Arraste de novo.")
+            return .failed(String(localized: "\(source.title) se mexeu, mas não ficou exatamente onde você soltou. Arraste de novo."))
         }
         return .moved(source.title)
     }

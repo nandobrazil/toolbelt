@@ -35,19 +35,19 @@ struct MenuBarLayoutEditor: View {
                     .foregroundStyle(.secondary)
             } else {
                 MenuBarLayoutRow(
-                    title: "Na barra",
+                    title: String(localized: "Na barra"),
                     symbolName: "menubar.rectangle",
                     items: bridge.menuBarLayout.visible,
                     endTarget: .endOfVisible,
-                    oppositeAction: ("Esconder no cinto", .endOfHidden),
+                    oppositeAction: (String(localized: "Esconder no cinto"), .endOfHidden),
                     onDrop: bridge.requestMenuBarMove
                 )
                 MenuBarLayoutRow(
-                    title: "Escondidos no cinto",
+                    title: String(localized: "Escondidos no cinto"),
                     symbolName: "eye.slash",
                     items: bridge.menuBarLayout.hidden,
                     endTarget: .endOfHidden,
-                    oppositeAction: ("Mostrar na barra", .endOfVisible),
+                    oppositeAction: (String(localized: "Mostrar na barra"), .endOfVisible),
                     onDrop: bridge.requestMenuBarMove
                 )
             }
@@ -210,10 +210,10 @@ private struct MenuBarChip: View {
 
     private var helpText: String {
         if !item.isMovable {
-            return "\(item.label): o macOS deixa esse ícone fixo no fim da barra"
+            return String(localized: "\(item.label): o macOS deixa esse ícone fixo no fim da barra")
         }
         if item.isBehindNotch {
-            return "\(item.label): está na barra, mas atrás do notch, então não aparece"
+            return String(localized: "\(item.label): está na barra, mas atrás do notch, então não aparece")
         }
         return item.label
     }

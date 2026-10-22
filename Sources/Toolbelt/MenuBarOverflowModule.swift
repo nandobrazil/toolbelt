@@ -2,8 +2,8 @@ import AppKit
 
 final class MenuBarOverflowModule: ToolbeltModule {
     let identifier = "menuBarOverflow"
-    let title = "Esconder ícones da barra"
-    let summary = "Esconde ícones da barra e mostra todos num painel abaixo da setinha."
+    let title = String(localized: "Esconder ícones da barra")
+    let summary = String(localized: "Esconde ícones da barra e mostra todos num painel abaixo da setinha.")
     let symbolName = "menubar.arrow.up.rectangle"
     let requiresAccessibility = true
 
@@ -37,7 +37,7 @@ final class MenuBarOverflowModule: ToolbeltModule {
             string: "┊",
             attributes: [.foregroundColor: NSColor.tertiaryLabelColor]
         )
-        item.button?.toolTip = "Arraste com ⌘ os ícones para a esquerda deste traço para escondê-los"
+        item.button?.toolTip = String(localized: "Arraste com ⌘ os ícones para a esquerda deste traço para escondê-los")
         separatorItem = item
         collapse()
         refreshCache()
@@ -126,15 +126,15 @@ final class MenuBarOverflowModule: ToolbeltModule {
 
     func moveItem(withID identifier: String, to target: MenuBarLayoutTarget, completion: @escaping (MenuBarMoveOutcome) -> Void) {
         guard AccessibilityPermission.isTrusted else {
-            completion(.failed("Precisa da permissão de Acessibilidade para mover ícones."))
+            completion(.failed(String(localized: "Precisa da permissão de Acessibilidade para mover ícones.")))
             return
         }
         guard NSMenu.menuBarVisible() else {
-            completion(.failed("A barra de menus está escondida agora (tela cheia ou ocultar automaticamente). Nada foi movido."))
+            completion(.failed(String(localized: "A barra de menus está escondida agora (tela cheia ou ocultar automaticamente). Nada foi movido.")))
             return
         }
         guard NSApp.isActive, separatorItem != nil, !isMovingItem else {
-            completion(.failed("Deixe a janela de Configurações na frente e arraste de novo."))
+            completion(.failed(String(localized: "Deixe a janela de Configurações na frente e arraste de novo.")))
             return
         }
         isMovingItem = true

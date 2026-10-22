@@ -11,23 +11,23 @@ enum WindowLayout: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .leftHalf: return "Metade esquerda"
-        case .rightHalf: return "Metade direita"
-        case .topHalf: return "Metade de cima"
-        case .bottomHalf: return "Metade de baixo"
-        case .maximize: return "Maximizar"
-        case .center: return "Centralizar"
-        case .firstThird: return "Primeiro terço"
-        case .centerThird: return "Terço do meio"
-        case .lastThird: return "Último terço"
-        case .firstTwoThirds: return "Dois terços à esquerda"
-        case .lastTwoThirds: return "Dois terços à direita"
-        case .topLeft: return "Canto superior esquerdo"
-        case .topRight: return "Canto superior direito"
-        case .bottomLeft: return "Canto inferior esquerdo"
-        case .bottomRight: return "Canto inferior direito"
-        case .nextDisplay: return "Próximo monitor"
-        case .previousDisplay: return "Monitor anterior"
+        case .leftHalf: return String(localized: "Metade esquerda")
+        case .rightHalf: return String(localized: "Metade direita")
+        case .topHalf: return String(localized: "Metade de cima")
+        case .bottomHalf: return String(localized: "Metade de baixo")
+        case .maximize: return String(localized: "Maximizar")
+        case .center: return String(localized: "Centralizar")
+        case .firstThird: return String(localized: "Primeiro terço")
+        case .centerThird: return String(localized: "Terço do meio")
+        case .lastThird: return String(localized: "Último terço")
+        case .firstTwoThirds: return String(localized: "Dois terços à esquerda")
+        case .lastTwoThirds: return String(localized: "Dois terços à direita")
+        case .topLeft: return String(localized: "Canto superior esquerdo")
+        case .topRight: return String(localized: "Canto superior direito")
+        case .bottomLeft: return String(localized: "Canto inferior esquerdo")
+        case .bottomRight: return String(localized: "Canto inferior direito")
+        case .nextDisplay: return String(localized: "Próximo monitor")
+        case .previousDisplay: return String(localized: "Monitor anterior")
         }
     }
 
@@ -85,8 +85,8 @@ enum WindowLayout: String, CaseIterable, Identifiable {
 
 final class WindowLayoutModule: ToolbeltModule {
     let identifier = "windowLayout"
-    let title = "Organizar janelas"
-    let summary = "Atalhos de teclado para metades, terços, cantos e monitores."
+    let title = String(localized: "Organizar janelas")
+    let summary = String(localized: "Atalhos de teclado para metades, terços, cantos e monitores.")
     let symbolName = "rectangle.split.2x1"
     let requiresAccessibility = true
 
@@ -109,11 +109,11 @@ final class WindowLayoutModule: ToolbeltModule {
     }
 
     func menuItems() -> [NSMenuItem] {
-        let item = NSMenuItem(title: "Organizar janela", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: String(localized: "Organizar janela"), action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         for layout in WindowLayout.allCases {
             let shortcut = settings.shortcut(for: layout)?.display ?? ""
-            submenu.addItem(ActionMenuItem(title: "\(layout.title)\t\(shortcut)") { [weak self] in
+            submenu.addItem(ActionMenuItem(title: String(localized: "\(layout.title)\t\(shortcut)")) { [weak self] in
                 self?.apply(layout)
             })
         }

@@ -30,6 +30,7 @@ final class AppController: NSObject {
     func start() {
         NSLog("Toolbelt: started, accessibility trusted=\(AccessibilityPermission.isTrusted)")
         NativeWindowSwitching.restoreOnExit()
+        AppLanguage.atLaunch.apply()
         LaunchAtLogin.configureOnFirstLaunch()
         MainMenuBuilder.install { [weak self] in self?.openSettings() }
         restoreMissingItemPositions()
@@ -121,7 +122,7 @@ final class AppController: NSObject {
         }
         bridge.moveMenuBarItem = { [weak self] identifier, target, completion in
             guard let self, self.isRunning(self.menuBarOverflow) else {
-                completion(.failed("Ative o módulo da barra de menus para organizar os ícones."))
+                completion(.failed(String(localized: "Ative o módulo da barra de menus para organizar os ícones.")))
                 return
             }
             self.menuBarOverflow.moveItem(withID: identifier, to: target, completion: completion)
@@ -168,7 +169,7 @@ final class AppController: NSObject {
         item.button?.target = self
         item.button?.action = #selector(chevronClicked)
         item.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
-        item.button?.toolTip = "Toolbelt · clique: painel · ⌥ clique: organizar a barra · clique direito: menu rápido"
+        item.button?.toolTip = String(localized: "Toolbelt · clique: painel · ⌥ clique: organizar a barra · clique direito: menu rápido")
         chevronItem = item
     }
 
@@ -312,9 +313,9 @@ final class AppController: NSObject {
             sections: panelSections(),
             quickActions: quickActions(),
             trailingActions: [
-                PanelAction(title: "Relatar um problema", symbolName: "exclamationmark.bubble") { [weak self] in self?.feedbackWindow.show(kind: .bug) },
-                PanelAction(title: "Configurações", symbolName: "gearshape") { [weak self] in self?.openSettings() },
-                PanelAction(title: "Sair do Toolbelt", symbolName: "power") { NSApp.terminate(nil) }
+                PanelAction(title: String(localized: "Relatar um problema"), symbolName: "exclamationmark.bubble") { [weak self] in self?.feedbackWindow.show(kind: .bug) },
+                PanelAction(title: String(localized: "Configurações"), symbolName: "gearshape") { [weak self] in self?.openSettings() },
+                PanelAction(title: String(localized: "Sair do Toolbelt"), symbolName: "power") { NSApp.terminate(nil) }
             ],
             below: anchor
         ) { [weak self] extra in
@@ -328,17 +329,17 @@ final class AppController: NSObject {
         var actions: [PanelAction] = []
         if isRunning(clipboard) {
             let shortcut = settings.values.clipboard.activeShortcut.map { " (\($0.display))" } ?? ""
-            actions.append(PanelAction(title: "Histórico da área de transferência\(shortcut)", symbolName: "doc.on.clipboard") { [weak self] in
+            actions.append(PanelAction(title: String(localized: "Histórico da área de transferência\(shortcut)"), symbolName: "doc.on.clipboard") { [weak self] in
                 self?.clipboard.togglePicker()
             })
         }
         if isRunning(menuBarOverflow) {
-            actions.append(PanelAction(title: "Organizar a barra", symbolName: "arrow.left.and.right.square") { [weak self] in
+            actions.append(PanelAction(title: String(localized: "Organizar a barra"), symbolName: "arrow.left.and.right.square") { [weak self] in
                 self?.menuBarOverflow.toggleArrangeMode()
             })
         }
         if isRunning(windowLayout) {
-            actions.append(PanelAction(title: "Atalhos de janela", symbolName: "rectangle.split.2x1") { [weak self] in
+            actions.append(PanelAction(title: String(localized: "Atalhos de janela"), symbolName: "rectangle.split.2x1") { [weak self] in
                 self?.openSettings(section: .windows)
             })
         }
@@ -355,22 +356,22 @@ final class AppController: NSObject {
         }
         menu.addItem(.separator())
         if let release = updater.availableRelease {
-            menu.addItem(ActionMenuItem(title: "Atualizar para a versão \(release.version)") { [weak self] in
+            menu.addItem(ActionMenuItem(title: String(localized: "Atualizar para a versão \(release.version)")) { [weak self] in
                 self?.updater.installAvailableUpdate()
             })
         } else {
-            menu.addItem(ActionMenuItem(title: "Verificar atualizações…") { [weak self] in
+            menu.addItem(ActionMenuItem(title: String(localized: "Verificar atualizações…")) { [weak self] in
                 self?.updater.check(userInitiated: true)
                 self?.openSettings(section: .general)
             })
         }
-        menu.addItem(ActionMenuItem(title: "Relatar um problema…") { [weak self] in
+        menu.addItem(ActionMenuItem(title: String(localized: "Relatar um problema…")) { [weak self] in
             self?.feedbackWindow.show(kind: .bug)
         })
-        menu.addItem(ActionMenuItem(title: "Configurações…", keyEquivalent: ",") { [weak self] in
+        menu.addItem(ActionMenuItem(title: String(localized: "Configurações…"), keyEquivalent: ",") { [weak self] in
             self?.openSettings()
         })
-        menu.addItem(ActionMenuItem(title: "Sair do Toolbelt", keyEquivalent: "q") {
+        menu.addItem(ActionMenuItem(title: String(localized: "Sair do Toolbelt"), keyEquivalent: "q") {
             NSApp.terminate(nil)
         })
         chevronItem.menu = menu

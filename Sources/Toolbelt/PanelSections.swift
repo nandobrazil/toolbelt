@@ -20,7 +20,7 @@ enum PanelSections {
         for account in accounts {
             let name = account.account
             let row = HoverRow { onUse(name) }
-            row.toolTip = account.active ? "Conta ativa" : "Usar esta conta"
+            row.toolTip = account.active ? String(localized: "Conta ativa") : String(localized: "Usar esta conta")
 
             let badge = NSImageView(image: AccountBadge.image(for: name, diameter: 18))
             badge.translatesAutoresizingMaskIntoConstraints = false
@@ -44,7 +44,7 @@ enum PanelSections {
             content.orientation = .horizontal
             content.spacing = 8
             if account.email != nil {
-                let terminal = SmallIconButton(symbolName: "terminal", toolTip: "Abrir terminal com esta conta") {
+                let terminal = SmallIconButton(symbolName: "terminal", toolTip: String(localized: "Abrir terminal com esta conta")) {
                     onOpenTerminal(name)
                 }
                 content.addArrangedSubview(terminal)
@@ -63,29 +63,29 @@ enum PanelSections {
         switch state {
         case .available(let available):
             release = available
-            status = available.notes.first ?? "Você está na \(AppUpdater.currentVersion)."
+            status = available.notes.first ?? String(localized: "Você está na \(AppUpdater.currentVersion).")
             isActionable = true
         case .downloading(let downloading):
             release = downloading
-            status = "Baixando…"
+            status = String(localized: "Baixando…")
             isActionable = false
         case .installing(let installing):
             release = installing
-            status = "Instalando e reabrindo…"
+            status = String(localized: "Instalando e reabrindo…")
             isActionable = false
         default:
             return nil
         }
         let stack = verticalStack()
-        stack.addArrangedSubview(header("Atualização"))
+        stack.addArrangedSubview(header(String(localized: "Atualização")))
         let row = HoverRow { if isActionable { onInstall() } }
-        row.toolTip = isActionable ? "Baixar, instalar e reabrir o Toolbelt" : nil
+        row.toolTip = isActionable ? String(localized: "Baixar, instalar e reabrir o Toolbelt") : nil
 
         let icon = NSImageView(image: NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: nil) ?? NSImage())
         icon.contentTintColor = .controlAccentColor
         icon.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
 
-        let title = NSTextField(labelWithString: "Toolbelt \(release.version) disponível")
+        let title = NSTextField(labelWithString: String(localized: "Toolbelt \(release.version) disponível"))
         title.font = .systemFont(ofSize: 13, weight: .semibold)
         let subtitle = NSTextField(labelWithString: status)
         subtitle.font = .systemFont(ofSize: 11)
@@ -99,7 +99,7 @@ enum PanelSections {
         content.orientation = .horizontal
         content.spacing = 8
         if isActionable {
-            content.addArrangedSubview(TextActionButton(title: "Atualizar", handler: onInstall))
+            content.addArrangedSubview(TextActionButton(title: String(localized: "Atualizar"), handler: onInstall))
         } else {
             let spinner = NSProgressIndicator()
             spinner.style = .spinning
@@ -117,18 +117,18 @@ enum PanelSections {
     static func crash(pending: [PendingCrash], onSend: @escaping () -> Void, onAlways: @escaping () -> Void, onDismiss: @escaping () -> Void) -> NSView? {
         guard !pending.isEmpty else { return nil }
         let stack = verticalStack()
-        stack.addArrangedSubview(header("Relatório de falha"))
+        stack.addArrangedSubview(header(String(localized: "Relatório de falha")))
 
         let icon = NSImageView(image: NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: nil) ?? NSImage())
         icon.contentTintColor = .systemOrange
         icon.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
         let onlyHangs = pending.allSatisfy { $0.kind == .hang }
         let headline = pending.count > 1
-            ? "\(pending.count) falhas desde a última vez"
-            : (onlyHangs ? "O Toolbelt travou" : "O Toolbelt fechou inesperadamente")
+            ? String(localized: "\(pending.count) falhas desde a última vez")
+            : (onlyHangs ? String(localized: "O Toolbelt travou") : String(localized: "O Toolbelt fechou inesperadamente"))
         let title = NSTextField(labelWithString: headline)
         title.font = .systemFont(ofSize: 13, weight: .semibold)
-        let subtitle = NSTextField(wrappingLabelWithString: "Enviar o relatório ajuda a corrigir. Vai só o técnico: versão, macOS e onde falhou.")
+        let subtitle = NSTextField(wrappingLabelWithString: String(localized: "Enviar o relatório ajuda a corrigir. Vai só o técnico: versão, macOS e onde falhou."))
         subtitle.font = .systemFont(ofSize: 11)
         subtitle.textColor = .secondaryLabelColor
         subtitle.preferredMaxLayoutWidth = width - 30
@@ -142,9 +142,9 @@ enum PanelSections {
         stack.addArrangedSubview(line)
 
         let buttons = NSStackView(views: [
-            TextActionButton(title: "Enviar", handler: onSend),
-            TextActionButton(title: "Sempre enviar", isProminent: false, handler: onAlways),
-            TextActionButton(title: "Agora não", isProminent: false, handler: onDismiss)
+            TextActionButton(title: String(localized: "Enviar"), handler: onSend),
+            TextActionButton(title: String(localized: "Sempre enviar"), isProminent: false, handler: onAlways),
+            TextActionButton(title: String(localized: "Agora não"), isProminent: false, handler: onDismiss)
         ])
         buttons.orientation = .horizontal
         buttons.spacing = 6
@@ -155,30 +155,30 @@ enum PanelSections {
 
     static func system(snapshot: SystemSnapshot, onOpenReport: @escaping () -> Void) -> NSView {
         let stack = verticalStack()
-        stack.addArrangedSubview(header("Sistema"))
+        stack.addArrangedSubview(header(String(localized: "Sistema")))
 
         let memoryRatio = snapshot.memoryUsedRatio
         stack.addArrangedSubview(meterRow(
-            title: "Memória",
-            value: "\(ByteFormat.memory(snapshot.memoryUsed)) de \(ByteFormat.memory(snapshot.memoryTotal))",
+            title: String(localized: "Memória"),
+            value: String(localized: "\(ByteFormat.memory(snapshot.memoryUsed)) de \(ByteFormat.memory(snapshot.memoryTotal))"),
             ratio: memoryRatio,
             color: snapshot.pressureLevel >= 4 ? .systemRed : (snapshot.pressureLevel >= 2 ? .systemOrange : .controlAccentColor)
         ))
-        let swap = NSTextField(labelWithString: "Swap \(ByteFormat.memory(snapshot.swapUsed)) · pressão \(snapshot.pressureTitle)")
+        let swap = NSTextField(labelWithString: String(localized: "Swap \(ByteFormat.memory(snapshot.swapUsed)) · pressão \(snapshot.pressureTitle)"))
         swap.font = .systemFont(ofSize: 11)
         swap.textColor = .secondaryLabelColor
         stack.addArrangedSubview(swap)
 
         let diskUsed = 1 - snapshot.diskFreeRatio
         stack.addArrangedSubview(meterRow(
-            title: "Disco",
-            value: "\(ByteFormat.storage(snapshot.diskFree)) livres",
+            title: String(localized: "Disco"),
+            value: String(localized: "\(ByteFormat.storage(snapshot.diskFree)) livres"),
             ratio: diskUsed,
             color: snapshot.diskFreeRatio < 0.05 ? .systemRed : (snapshot.diskFreeRatio < 0.1 ? .systemOrange : .controlAccentColor)
         ))
 
         let report = HoverRow(handler: onOpenReport)
-        let label = NSTextField(labelWithString: "Relatório completo (macscan)…")
+        let label = NSTextField(labelWithString: String(localized: "Relatório completo (macscan)…"))
         label.font = .systemFont(ofSize: 12)
         let icon = NSImageView(image: NSImage(systemSymbolName: "doc.text.magnifyingglass", accessibilityDescription: nil) ?? NSImage())
         let content = NSStackView(views: [icon, label, NSView()])
@@ -213,10 +213,10 @@ enum PanelSections {
     }
 
     private static func usageLine(_ account: ClaudeAccountSummary) -> String {
-        guard let email = account.email else { return "sem login" }
+        guard let email = account.email else { return String(localized: "sem login") }
         let fiveHour = account.fiveHour.currentPercent.map { "\($0)%" } ?? "?"
         let sevenDay = account.sevenDay.currentPercent.map { "\($0)%" } ?? "?"
-        return "\(email) · 5h \(fiveHour) · sem. \(sevenDay)"
+        return String(localized: "\(email) · 5h \(fiveHour) · sem. \(sevenDay)")
     }
 
     private static func verticalStack(spacing: CGFloat = 4) -> NSStackView {

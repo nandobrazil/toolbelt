@@ -53,7 +53,7 @@ final class SystemReportModel: ObservableObject {
                 process.waitUntilExit()
                 report = try JSONDecoder().decode(MacscanReport.self, from: data)
             } catch {
-                failure = "Não consegui rodar o macscan: \(error.localizedDescription)"
+                failure = String(localized: "Não consegui rodar o macscan: \(error.localizedDescription)")
             }
             DispatchQueue.main.async {
                 self.isLoading = false
@@ -227,7 +227,7 @@ final class SystemReportWindowController {
 
     private func makeWindow() -> NSWindow {
         let window = NSWindow(contentViewController: NSHostingController(rootView: SystemReportView(model: model)))
-        window.title = "Relatório do Mac"
+        window.title = String(localized: "Relatório do Mac")
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.isReleasedWhenClosed = false
         window.setContentSize(NSSize(width: 700, height: 640))

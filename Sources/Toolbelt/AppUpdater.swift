@@ -131,7 +131,7 @@ final class AppUpdater: NSObject, ObservableObject {
                 release = .success(decoded)
             } else {
                 NSLog("Toolbelt: update check failed: \(error?.localizedDescription ?? "status \((response as? HTTPURLResponse)?.statusCode ?? 0)")")
-                release = .failure(UpdateFailure(message: "Não consegui verificar agora. Confira a internet e tente de novo."))
+                release = .failure(UpdateFailure(message: String(localized: "Não consegui verificar agora. Confira a internet e tente de novo.")))
             }
             DispatchQueue.main.async {
                 self?.finishCheck(release, userInitiated: userInitiated, previousState: previousState)
@@ -148,7 +148,7 @@ final class AppUpdater: NSObject, ObservableObject {
             return
         }
         guard FileManager.default.isWritableFile(atPath: destination.deletingLastPathComponent().path) else {
-            state = .failed("Sem permissão para trocar o app em \(destination.deletingLastPathComponent().path). Baixe pelo site.")
+            state = .failed(String(localized: "Sem permissão para trocar o app em \(destination.deletingLastPathComponent().path). Baixe pelo site."))
             NSWorkspace.shared.open(release.downloadPageURL)
             return
         }
@@ -160,7 +160,7 @@ final class AppUpdater: NSObject, ObservableObject {
                 prepared = Self.prepare(archive: location, for: release, replacing: destination, teamIdentifier: teamIdentifier)
             } else {
                 NSLog("Toolbelt: update download failed: \(error?.localizedDescription ?? "status \((response as? HTTPURLResponse)?.statusCode ?? 0)")")
-                prepared = .failure(UpdateFailure(message: "Não consegui baixar a atualização."))
+                prepared = .failure(UpdateFailure(message: String(localized: "Não consegui baixar a atualização.")))
             }
             DispatchQueue.main.async {
                 self?.finishInstall(prepared, release: release, destination: destination)
@@ -230,15 +230,15 @@ final class AppUpdater: NSObject, ObservableObject {
                 _ = try FileManager.default.replaceItemAt(destination, withItemAt: preparedApp)
             } catch {
                 NSLog("Toolbelt: update replace failed: \(error.localizedDescription)")
-                state = .failed("Não consegui trocar o app: \(error.localizedDescription)")
+                state = .failed(String(localized: "Não consegui trocar o app: \(error.localizedDescription)"))
                 return
             }
             NSLog("Toolbelt: updated to \(release.version), relaunching")
-            relaunch(at: destination)
+            Self.relaunch(at: destination)
         }
     }
 
-    private func relaunch(at url: URL) {
+    static func relaunch(at url: URL) {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
         configuration.arguments = [Self.relaunchArgument, String(ProcessInfo.processInfo.processIdentifier)]
@@ -254,12 +254,12 @@ final class AppUpdater: NSObject, ObservableObject {
 
     private static func prepare(archive: URL, for release: UpdateRelease, replacing destination: URL, teamIdentifier: String) -> Result<URL, UpdateFailure> {
         guard let data = try? Data(contentsOf: archive) else {
-            return .failure(UpdateFailure(message: "Não consegui ler o arquivo baixado."))
+            return .failure(UpdateFailure(message: String(localized: "Não consegui ler o arquivo baixado.")))
         }
         let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         guard digest == release.archiveSHA256.lowercased() else {
             NSLog("Toolbelt: update checksum mismatch \(digest)")
-            return .failure(UpdateFailure(message: "O arquivo baixado não confere. Nada foi alterado."))
+            return .failure(UpdateFailure(message: String(localized: "O arquivo baixado não confere. Nada foi alterado.")))
         }
         let workDirectory: URL
         do {
@@ -270,7 +270,7 @@ final class AppUpdater: NSObject, ObservableObject {
                 create: true
             )
         } catch {
-            return .failure(UpdateFailure(message: "Não consegui preparar a pasta temporária."))
+            return .failure(UpdateFailure(message: String(localized: "Não consegui preparar a pasta temporária.")))
         }
         let unzip = Process()
         unzip.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
@@ -279,19 +279,19 @@ final class AppUpdater: NSObject, ObservableObject {
             try unzip.run()
             unzip.waitUntilExit()
         } catch {
-            return .failure(UpdateFailure(message: "Não consegui abrir o arquivo da atualização."))
+            return .failure(UpdateFailure(message: String(localized: "Não consegui abrir o arquivo da atualização.")))
         }
         let preparedApp = workDirectory.appendingPathComponent(destination.lastPathComponent)
         guard unzip.terminationStatus == 0, FileManager.default.fileExists(atPath: preparedApp.path) else {
-            return .failure(UpdateFailure(message: "O arquivo da atualização veio incompleto."))
+            return .failure(UpdateFailure(message: String(localized: "O arquivo da atualização veio incompleto.")))
         }
         guard isTrusted(preparedApp, teamIdentifier: teamIdentifier) else {
             NSLog("Toolbelt: update signature rejected")
-            return .failure(UpdateFailure(message: "A assinatura da atualização não é do mesmo desenvolvedor. Nada foi alterado."))
+            return .failure(UpdateFailure(message: String(localized: "A assinatura da atualização não é do mesmo desenvolvedor. Nada foi alterado.")))
         }
         let preparedVersion = Bundle(url: preparedApp)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         guard preparedVersion == release.version else {
-            return .failure(UpdateFailure(message: "A versão baixada não é a anunciada. Nada foi alterado."))
+            return .failure(UpdateFailure(message: String(localized: "A versão baixada não é a anunciada. Nada foi alterado.")))
         }
         return .success(preparedApp)
     }
@@ -316,7 +316,7 @@ final class AppUpdater: NSObject, ObservableObject {
     }
 
     private func configureNotifications() {
-        let install = UNNotificationAction(identifier: Self.installActionIdentifier, title: "Atualizar agora", options: [])
+        let install = UNNotificationAction(identifier: Self.installActionIdentifier, title: String(localized: "Atualizar agora"), options: [])
         let category = UNNotificationCategory(identifier: Self.notificationCategory, actions: [install], intentIdentifiers: [], options: [])
         NotificationRouter.shared.register(category) { [weak self] action in
             if action == Self.installActionIdentifier {
@@ -328,10 +328,10 @@ final class AppUpdater: NSObject, ObservableObject {
     }
 
     private func postNotification(for release: UpdateRelease) {
-        let body = release.notes.first.map { "\($0) Você está na \(Self.currentVersion)." } ?? "Você está na \(Self.currentVersion). Atualize com um clique."
+        let body = release.notes.first.map { String(localized: "\($0) Você está na \(Self.currentVersion).") } ?? String(localized: "Você está na \(Self.currentVersion). Atualize com um clique.")
         NotificationRouter.shared.post(
             identifier: Self.notificationIdentifier,
-            title: "Toolbelt \(release.version) disponível",
+            title: String(localized: "Toolbelt \(release.version) disponível"),
             body: body,
             category: Self.notificationCategory
         )

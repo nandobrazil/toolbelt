@@ -2,8 +2,8 @@ import AppKit
 
 final class ClipboardModule: ToolbeltModule {
     let identifier = "clipboard"
-    let title = "Área de transferência"
-    let summary = "Histórico de textos, imagens e prints, com atalho para colar."
+    let title = String(localized: "Área de transferência")
+    let summary = String(localized: "Histórico de textos, imagens e prints, com atalho para colar.")
     let symbolName = "doc.on.clipboard"
     let requiresAccessibility = true
 
@@ -85,11 +85,11 @@ final class ClipboardModule: ToolbeltModule {
     func menuItems() -> [NSMenuItem] {
         let shortcut = settings.activeShortcut?.display ?? ""
         return [
-            ActionMenuItem(title: "Histórico da área de transferência\t\(shortcut)") { [weak self] in
+            ActionMenuItem(title: String(localized: "Histórico da área de transferência\t\(shortcut)")) { [weak self] in
                 self?.togglePicker()
             },
-            disabledMenuItem("     \(store.entries.count) itens, \(imageCount) imagens"),
-            ActionMenuItem(title: "Limpar histórico") { [weak self] in
+            disabledMenuItem(String(localized: "     \(store.entries.count) itens, \(imageCount) imagens")),
+            ActionMenuItem(title: String(localized: "Limpar histórico")) { [weak self] in
                 self?.store.clear()
             }
         ]

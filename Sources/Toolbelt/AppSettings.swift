@@ -12,10 +12,10 @@ enum ChevronStyle: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .belt: return "Cinto"
-        case .chevron: return "Seta"
-        case .dots: return "Três pontos"
-        case .toolbox: return "Caixa de ferramentas"
+        case .belt: return String(localized: "Cinto")
+        case .chevron: return String(localized: "Seta")
+        case .dots: return String(localized: "Três pontos")
+        case .toolbox: return String(localized: "Caixa de ferramentas")
         }
     }
 
@@ -46,8 +46,8 @@ enum PickerPosition: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .cursor: return "Junto ao cursor"
-        case .screenCenter: return "Centro da tela"
+        case .cursor: return String(localized: "Junto ao cursor")
+        case .screenCenter: return String(localized: "Centro da tela")
         }
     }
 }
@@ -61,9 +61,9 @@ enum PanelTheme: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .system: return "Do sistema"
-        case .light: return "Claro"
-        case .dark: return "Escuro"
+        case .system: return String(localized: "Do sistema")
+        case .light: return String(localized: "Claro")
+        case .dark: return String(localized: "Escuro")
         }
     }
 }
@@ -77,9 +77,9 @@ enum PanelBackground: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .glass: return "Vidro transparente"
-        case .frosted: return "Fosco"
-        case .solid: return "Sólido"
+        case .glass: return String(localized: "Vidro transparente")
+        case .frosted: return String(localized: "Fosco")
+        case .solid: return String(localized: "Sólido")
         }
     }
 }
@@ -123,11 +123,11 @@ enum InlineInfo: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .claudeAccount: return "Conta ativa do Claude"
-        case .claudeUsage: return "Uso de 5 h do Claude"
-        case .memory: return "RAM em uso (%)"
-        case .swap: return "Swap em uso"
-        case .disk: return "Espaço livre no disco"
+        case .claudeAccount: return String(localized: "Conta ativa do Claude")
+        case .claudeUsage: return String(localized: "Uso de 5 h do Claude")
+        case .memory: return String(localized: "RAM em uso (%)")
+        case .swap: return String(localized: "Swap em uso")
+        case .disk: return String(localized: "Espaço livre no disco")
         }
     }
 }
@@ -365,6 +365,35 @@ struct AppSwitcherSettings: Codable, Equatable {
     }
 }
 
+enum AppLanguage: String, Codable, CaseIterable, Identifiable {
+    case automatic
+    case portuguese
+    case english
+
+    private static let preferredLanguagesKey = "AppleLanguages"
+
+    static let atLaunch = AppSettings.shared.values.appLanguage
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .automatic: return String(localized: "Automático (idioma do Mac)")
+        case .portuguese: return "Português"
+        case .english: return "English"
+        }
+    }
+
+    func apply() {
+        let defaults = UserDefaults.standard
+        switch self {
+        case .automatic: defaults.removeObject(forKey: Self.preferredLanguagesKey)
+        case .portuguese: defaults.set(["pt-BR"], forKey: Self.preferredLanguagesKey)
+        case .english: defaults.set(["en"], forKey: Self.preferredLanguagesKey)
+        }
+    }
+}
+
 enum CrashReportMode: String, Codable, CaseIterable, Identifiable {
     case ask
     case always
@@ -374,9 +403,9 @@ enum CrashReportMode: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .ask: return "Perguntar a cada falha"
-        case .always: return "Enviar automaticamente"
-        case .never: return "Nunca enviar"
+        case .ask: return String(localized: "Perguntar a cada falha")
+        case .always: return String(localized: "Enviar automaticamente")
+        case .never: return String(localized: "Nunca enviar")
         }
     }
 }
@@ -416,6 +445,7 @@ struct SettingsValues: Codable, Equatable {
     var appSwitcher = AppSwitcherSettings()
     var updates = UpdateSettings()
     var reports = ReportSettings()
+    var appLanguage: AppLanguage = .automatic
 
     init() {}
 
@@ -430,6 +460,7 @@ struct SettingsValues: Codable, Equatable {
         appSwitcher = (try? container.decodeIfPresent(AppSwitcherSettings.self, forKey: .appSwitcher)) ?? AppSwitcherSettings()
         updates = (try? container.decodeIfPresent(UpdateSettings.self, forKey: .updates)) ?? UpdateSettings()
         reports = (try? container.decodeIfPresent(ReportSettings.self, forKey: .reports)) ?? ReportSettings()
+        appLanguage = (try? container.decodeIfPresent(AppLanguage.self, forKey: .appLanguage)) ?? .automatic
     }
 }
 

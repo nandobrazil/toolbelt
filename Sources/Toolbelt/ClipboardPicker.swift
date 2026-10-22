@@ -187,16 +187,20 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
             guard !normalizedQuery.isEmpty else { return true }
             switch entry.kind {
             case .text: return entry.text?.lowercased().contains(normalizedQuery) ?? false
-            case .image: return "imagem print screenshot".contains(normalizedQuery)
+            case .image: return "imagem image print screenshot".contains(normalizedQuery)
             }
         }
         tableView.reloadData()
     }
 
     private func updateQueryLabel() {
-        queryLabel.stringValue = query.isEmpty
-            ? "Histórico · digite para filtrar · 1–9 e 0 \(AppSettings.shared.values.clipboard.pasteAutomatically ? "colam" : "copiam") direto"
-            : "Filtro: \(query)"
+        if !query.isEmpty {
+            queryLabel.stringValue = String(localized: "Filtro: \(query)")
+        } else if AppSettings.shared.values.clipboard.pasteAutomatically {
+            queryLabel.stringValue = String(localized: "Histórico · digite para filtrar · 1–9 e 0 colam direto")
+        } else {
+            queryLabel.stringValue = String(localized: "Histórico · digite para filtrar · 1–9 e 0 copiam direto")
+        }
     }
 
     private func handleKey(_ event: NSEvent) -> Bool {

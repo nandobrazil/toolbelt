@@ -31,6 +31,8 @@ struct ClaudeAccountSummary: Decodable, Identifiable {
 
     var id: String { account }
 
+    var emailOrPlaceholder: String { email ?? String(localized: "sem login") }
+
     var configFilePath: String {
         primary ? NSString(string: "~/.claude.json").expandingTildeInPath : configDir + "/.claude.json"
     }
@@ -42,7 +44,7 @@ struct ClaudeAccountSummary: Decodable, Identifiable {
         if let email, let localPart = email.split(separator: "@").first {
             return String(localPart)
         }
-        return "Conta \(account)"
+        return String(localized: "Conta \(account)")
     }
 }
 
@@ -81,8 +83,8 @@ private struct StatusReport: Decodable {
 
 final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     let identifier = "claudeAccounts"
-    let title = "Contas do Claude"
-    let summary = "Alterna entre contas do Claude Code e mostra o uso de cada uma."
+    let title = String(localized: "Contas do Claude")
+    let summary = String(localized: "Alterna entre contas do Claude Code e mostra o uso de cada uma.")
     let symbolName = "sparkle"
 
     private static let maximumTitleLength = 12
@@ -279,7 +281,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
             parts.append("\(percent)%")
         }
         button.title = parts.isEmpty ? "" : " " + parts.joined(separator: " · ")
-        button.toolTip = "Conta ativa: \(active.shortName) · \(active.email ?? "sem login")"
+        button.toolTip = String(localized: "Conta ativa: \(active.shortName) · \(active.emailOrPlaceholder)")
     }
 
     private static func shortened(_ text: String) -> String {
@@ -289,20 +291,20 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
     private func rebuildMenu() {
         menu.removeAllItems()
         guard let report else {
-            menu.addItem(disabledMenuItem("Não consegui rodar o cca"))
+            menu.addItem(disabledMenuItem(String(localized: "Não consegui rodar o cca")))
             return
         }
 
         if let active = report.accounts.first(where: { $0.active }) {
-            let header = disabledMenuItem("Ativa agora: \(active.shortName)")
+            let header = disabledMenuItem(String(localized: "Ativa agora: \(active.shortName)"))
             header.image = AccountBadge.image(for: active.account)
             menu.addItem(header)
             menu.addItem(.separator())
         }
-        menu.addItem(sectionHeader("Trocar para"))
+        menu.addItem(sectionHeader(String(localized: "Trocar para")))
         for account in report.accounts {
             let name = account.account
-            let item = ActionMenuItem(title: "\(account.shortName) · \(account.email ?? "sem login")") { [weak self] in
+            let item = ActionMenuItem(title: "\(account.shortName) · \(account.emailOrPlaceholder)") { [weak self] in
                 self?.use(name)
             }
             item.image = AccountBadge.image(for: account.account)
@@ -312,7 +314,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
-        let terminalItem = NSMenuItem(title: "Abrir terminal com", action: nil, keyEquivalent: "")
+        let terminalItem = NSMenuItem(title: String(localized: "Abrir terminal com"), action: nil, keyEquivalent: "")
         let terminalMenu = NSMenu()
         let shortcuts = AppSettings.shared.values.claude.terminalShortcuts
         for account in report.accounts where account.email != nil {
@@ -329,8 +331,8 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         menu.addItem(terminalItem)
 
         if let session = report.latestSession, let cwd = session.cwd {
-            menu.addItem(disabledMenuItem("Última conversa: " + (cwd as NSString).abbreviatingWithTildeInPath))
-            let resumeItem = NSMenuItem(title: "Retomar última conversa em", action: nil, keyEquivalent: "")
+            menu.addItem(disabledMenuItem(String(localized: "Última conversa: ") + (cwd as NSString).abbreviatingWithTildeInPath))
+            let resumeItem = NSMenuItem(title: String(localized: "Retomar última conversa em"), action: nil, keyEquivalent: "")
             let resumeMenu = NSMenu()
             for account in report.accounts where account.email != nil {
                 let name = account.account
@@ -345,13 +347,13 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
 
         for account in report.accounts where account.email == nil {
             let name = account.account
-            menu.addItem(ActionMenuItem(title: "Entrar em \(account.label)…") { [weak self] in
+            menu.addItem(ActionMenuItem(title: String(localized: "Entrar em \(account.label)…")) { [weak self] in
                 self?.login(name)
             })
         }
 
         menu.addItem(.separator())
-        menu.addItem(ActionMenuItem(title: "Gerenciar contas…") { [weak self] in
+        menu.addItem(ActionMenuItem(title: String(localized: "Gerenciar contas…")) { [weak self] in
             self?.onOpenSettings?()
         })
     }
@@ -360,7 +362,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         guard account.email != nil else { return "—" }
         let fiveHour = account.fiveHour.currentPercent.map { "\($0)%" } ?? "?"
         let sevenDay = account.sevenDay.currentPercent.map { "\($0)%" } ?? "?"
-        var line = "5h \(fiveHour)\(resetSuffix(account.fiveHour.resetsAt)) · semana \(sevenDay)"
+        var line = String(localized: "5h \(fiveHour)\(resetSuffix(account.fiveHour.resetsAt)) · semana \(sevenDay)")
         if let fetchedAtMs = account.usageFetchedAtMs {
             line += " · \(Self.relativeAge(fetchedAtMs))"
         }
@@ -371,7 +373,7 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
         guard let isoDate, let date = Self.parseDate(isoDate), date > Date() else { return "" }
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
-        return " (zera \(formatter.string(from: date)))"
+        return String(localized: " (zera \(formatter.string(from: date)))")
     }
 
     static func parseDate(_ value: String) -> Date? {
@@ -382,10 +384,10 @@ final class ClaudeAccountsModule: NSObject, ToolbeltModule, NSMenuDelegate {
 
     static func relativeAge(_ milliseconds: Double) -> String {
         let minutes = Int(Date().timeIntervalSince1970 - milliseconds / 1000) / 60
-        if minutes < 1 { return "agora" }
-        if minutes < 60 { return "há \(minutes) min" }
-        if minutes < 1440 { return "há \(minutes / 60) h" }
-        return "há \(minutes / 1440) d"
+        if minutes < 1 { return String(localized: "agora") }
+        if minutes < 60 { return String(localized: "há \(minutes) min") }
+        if minutes < 1440 { return String(localized: "há \(minutes / 60) h") }
+        return String(localized: "há \(minutes / 1440) d")
     }
 }
 

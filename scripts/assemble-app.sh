@@ -22,6 +22,7 @@ mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources/bin"
 cp "$executable" "$app_dir/Contents/MacOS/Toolbelt"
 cp "$project_dir/Resources/AppIcon.icns" "$app_dir/Contents/Resources/AppIcon.icns"
 cp "$project_dir/bin/cca" "$project_dir/bin/macscan" "$app_dir/Contents/Resources/bin/"
+cp -R "$project_dir"/Resources/Localization/*.lproj "$app_dir/Contents/Resources/"
 chmod 755 "$app_dir/Contents/Resources/bin/"*
 
 cat > "$app_dir/Contents/Info.plist" <<PLIST
@@ -39,6 +40,7 @@ cat > "$app_dir/Contents/Info.plist" <<PLIST
   <key>CFBundleShortVersionString</key><string>$version</string>
   <key>CFBundleVersion</key><string>$build_number</string>
   <key>CFBundleDevelopmentRegion</key><string>pt-BR</string>
+  <key>CFBundleLocalizations</key><array><string>pt-BR</string><string>en</string></array>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>

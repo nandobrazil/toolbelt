@@ -117,9 +117,9 @@ final class ToolbeltPanel {
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         if let hiddenExtras {
-            stack.addArrangedSubview(sectionLabel("Ícones escondidos"))
+            stack.addArrangedSubview(sectionLabel(String(localized: "Ícones escondidos")))
             if hiddenExtras.isEmpty {
-                let empty = NSTextField(labelWithString: "Nenhum. ⌥ clique na setinha para organizar a barra.")
+                let empty = NSTextField(labelWithString: String(localized: "Nenhum. ⌥ clique na setinha para organizar a barra."))
                 empty.font = .systemFont(ofSize: 12)
                 empty.textColor = .secondaryLabelColor
                 stack.addArrangedSubview(empty)

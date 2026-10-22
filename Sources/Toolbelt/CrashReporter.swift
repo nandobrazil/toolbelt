@@ -141,8 +141,8 @@ final class CrashReporter: NSObject, ObservableObject {
     }
 
     private func registerNotificationCategory() {
-        let send = UNNotificationAction(identifier: Self.sendActionIdentifier, title: "Enviar", options: [])
-        let always = UNNotificationAction(identifier: Self.alwaysActionIdentifier, title: "Sempre enviar", options: [])
+        let send = UNNotificationAction(identifier: Self.sendActionIdentifier, title: String(localized: "Enviar"), options: [])
+        let always = UNNotificationAction(identifier: Self.alwaysActionIdentifier, title: String(localized: "Sempre enviar"), options: [])
         let category = UNNotificationCategory(identifier: Self.notificationCategory, actions: [send, always], intentIdentifiers: [], options: [])
         NotificationRouter.shared.register(category) { [weak self] action in
             switch action {
@@ -158,8 +158,8 @@ final class CrashReporter: NSObject, ObservableObject {
         let onlyHangs = crashes.allSatisfy { $0.kind == .hang }
         NotificationRouter.shared.post(
             identifier: Self.notificationIdentifier,
-            title: onlyHangs ? "O Toolbelt travou" : "O Toolbelt fechou inesperadamente",
-            body: "Enviar o relatório ajuda a corrigir. Vai só o técnico: versão, macOS e onde falhou.",
+            title: onlyHangs ? String(localized: "O Toolbelt travou") : String(localized: "O Toolbelt fechou inesperadamente"),
+            body: String(localized: "Enviar o relatório ajuda a corrigir. Vai só o técnico: versão, macOS e onde falhou."),
             category: Self.notificationCategory
         )
     }

@@ -16,15 +16,15 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: return "Geral"
-        case .menuBar: return "Barra de menus"
-        case .switcher: return "Alternar janelas"
-        case .clipboard: return "Área de transferência"
-        case .windows: return "Janelas"
-        case .system: return "Monitor do sistema"
-        case .claude: return "Contas do Claude"
-        case .support: return "Ajuda e relatórios"
-        case .about: return "Sobre"
+        case .general: return String(localized: "Geral")
+        case .menuBar: return String(localized: "Barra de menus")
+        case .switcher: return String(localized: "Alternar janelas")
+        case .clipboard: return String(localized: "Área de transferência")
+        case .windows: return String(localized: "Janelas")
+        case .system: return String(localized: "Monitor do sistema")
+        case .claude: return String(localized: "Contas do Claude")
+        case .support: return String(localized: "Ajuda e relatórios")
+        case .about: return String(localized: "Sobre")
         }
     }
 
@@ -164,7 +164,7 @@ struct SettingsView: View {
 private struct ModuleToggleSection: View {
     @ObservedObject var settings: AppSettings
     let section: SettingsSection
-    let summary: String
+    let summary: LocalizedStringKey
 
     var body: some View {
         if let identifier = section.moduleIdentifier {
@@ -200,6 +200,34 @@ private struct GeneralSettingsPage: View {
                     .onChange(of: launchAtLogin) { _, enabled in
                         LaunchAtLogin.setEnabled(enabled)
                     }
+            }
+
+            Section {
+                Picker("Idioma do app", selection: Binding(
+                    get: { settings.values.appLanguage },
+                    set: { language in
+                        settings.values.appLanguage = language
+                        language.apply()
+                    }
+                )) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.title).tag(language)
+                    }
+                }
+                if settings.values.appLanguage != AppLanguage.atLaunch {
+                    HStack {
+                        Text("Vale depois de reabrir o Toolbelt.")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Reabrir agora") {
+                            AppUpdater.relaunch(at: Bundle.main.bundleURL)
+                        }
+                    }
+                }
+            } header: {
+                Text("Idioma")
+            } footer: {
+                Text("Automático usa o idioma do Mac quando ele é português ou inglês; nos outros idiomas, fica em português.")
             }
 
             UpdateSettingsSection(settings: settings, updater: updater)
@@ -463,7 +491,7 @@ private struct ClipboardAppearanceSection: View {
 }
 
 private struct SliderRow: View {
-    let title: String
+    let title: LocalizedStringKey
     @Binding var value: Double
     let range: ClosedRange<Double>
     let step: Double
@@ -519,7 +547,7 @@ private struct ClipboardArchiveSection: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-        panel.prompt = "Usar esta pasta"
+        panel.prompt = String(localized: "Usar esta pasta")
         panel.directoryURL = URL(fileURLWithPath: settings.values.clipboard.archiveFolderPath).deletingLastPathComponent()
         guard panel.runModal() == .OK, let url = panel.url else { return }
         settings.values.clipboard.archiveFolderPath = url.path
@@ -634,7 +662,7 @@ private struct AppSwitcherSettingsPage: View {
     @State private var screenRecordingGranted = ScreenRecordingPermission.isGranted
 
     private var shortcutDisplay: String {
-        settings.values.appSwitcher.activeShortcut?.display ?? "O atalho"
+        settings.values.appSwitcher.activeShortcut?.display ?? String(localized: "O atalho")
     }
 
     var body: some View {
@@ -931,10 +959,10 @@ private struct ClaudeAccountRow: View {
     }
 
     private var subtitle: String {
-        guard let email = account.email else { return "sem login" }
+        guard let email = account.email else { return String(localized: "sem login") }
         let fiveHour = account.fiveHour.currentPercent.map { "\($0)%" } ?? "?"
         let sevenDay = account.sevenDay.currentPercent.map { "\($0)%" } ?? "?"
-        return "\(email) · 5h \(fiveHour) · semana \(sevenDay)"
+        return String(localized: "\(email) · 5h \(fiveHour) · semana \(sevenDay)")
     }
 
     private func commit() {
@@ -1112,7 +1140,7 @@ private struct AboutPage: View {
 
 private struct InstructionRow: View {
     let symbol: String
-    let text: String
+    let text: LocalizedStringKey
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
