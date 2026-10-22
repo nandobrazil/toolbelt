@@ -285,6 +285,38 @@ struct SystemMonitorSettings: Codable, Equatable {
     }
 }
 
+struct AppSwitcherSettings: Codable, Equatable {
+    static let defaultShortcut = KeyCombo(keyCode: 48, modifiers: KeyCombo.option)
+
+    var shortcut = AppSwitcherSettings.defaultShortcut
+    var isShortcutEnabled = true
+    var includesMinimized = true
+    var showDelayMilliseconds = 120
+    var iconSize = 64
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = AppSwitcherSettings()
+        shortcut = (try? container.decodeIfPresent(KeyCombo.self, forKey: .shortcut)) ?? defaults.shortcut
+        isShortcutEnabled = (try? container.decodeIfPresent(Bool.self, forKey: .isShortcutEnabled)) ?? defaults.isShortcutEnabled
+        includesMinimized = (try? container.decodeIfPresent(Bool.self, forKey: .includesMinimized)) ?? defaults.includesMinimized
+        showDelayMilliseconds = (try? container.decodeIfPresent(Int.self, forKey: .showDelayMilliseconds)) ?? defaults.showDelayMilliseconds
+        iconSize = (try? container.decodeIfPresent(Int.self, forKey: .iconSize)) ?? defaults.iconSize
+    }
+
+    var activeShortcut: KeyCombo? {
+        get { isShortcutEnabled ? shortcut : nil }
+        set {
+            isShortcutEnabled = newValue != nil
+            if let newValue {
+                shortcut = newValue
+            }
+        }
+    }
+}
+
 struct SettingsValues: Codable, Equatable {
     var enabledModules: [String: Bool] = [:]
     var menuBar = MenuBarSettings()
@@ -292,6 +324,7 @@ struct SettingsValues: Codable, Equatable {
     var windows = WindowSettings()
     var claude = ClaudeSettings()
     var systemMonitor = SystemMonitorSettings()
+    var appSwitcher = AppSwitcherSettings()
 
     init() {}
 
@@ -303,6 +336,7 @@ struct SettingsValues: Codable, Equatable {
         windows = (try? container.decodeIfPresent(WindowSettings.self, forKey: .windows)) ?? WindowSettings()
         claude = (try? container.decodeIfPresent(ClaudeSettings.self, forKey: .claude)) ?? ClaudeSettings()
         systemMonitor = (try? container.decodeIfPresent(SystemMonitorSettings.self, forKey: .systemMonitor)) ?? SystemMonitorSettings()
+        appSwitcher = (try? container.decodeIfPresent(AppSwitcherSettings.self, forKey: .appSwitcher)) ?? AppSwitcherSettings()
     }
 }
 

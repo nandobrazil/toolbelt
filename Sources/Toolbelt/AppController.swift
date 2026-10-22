@@ -7,8 +7,9 @@ final class AppController: NSObject {
     private let windowLayout = WindowLayoutModule()
     private let menuBarOverflow = MenuBarOverflowModule()
     private let systemMonitor = SystemMonitorModule()
+    private let appSwitcher = AppSwitcherModule()
     private let systemReport = SystemReportWindowController()
-    private lazy var modules: [ToolbeltModule] = [menuBarOverflow, clipboard, windowLayout, systemMonitor, claudeAccounts]
+    private lazy var modules: [ToolbeltModule] = [menuBarOverflow, appSwitcher, clipboard, windowLayout, systemMonitor, claudeAccounts]
 
     private let settings = AppSettings.shared
     private let panel = ToolbeltPanel()

@@ -4,6 +4,7 @@ import SwiftUI
 enum SettingsSection: String, CaseIterable, Identifiable {
     case general
     case menuBar
+    case switcher
     case clipboard
     case windows
     case system
@@ -16,6 +17,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "Geral"
         case .menuBar: return "Barra de menus"
+        case .switcher: return "Alternar janelas"
         case .clipboard: return "Área de transferência"
         case .windows: return "Janelas"
         case .system: return "Monitor do sistema"
@@ -28,6 +30,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .menuBar: return "menubar.arrow.up.rectangle"
+        case .switcher: return "rectangle.on.rectangle"
         case .clipboard: return "doc.on.clipboard"
         case .windows: return "rectangle.split.2x1"
         case .system: return "gauge.with.dots.needle.33percent"
@@ -39,6 +42,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     var moduleIdentifier: String? {
         switch self {
         case .menuBar: return "menuBarOverflow"
+        case .switcher: return "appSwitcher"
         case .clipboard: return "clipboard"
         case .windows: return "windowLayout"
         case .system: return "systemMonitor"
@@ -116,6 +120,7 @@ struct SettingsView: View {
         switch bridge.selection {
         case .general: GeneralSettingsPage(settings: settings, bridge: bridge)
         case .menuBar: MenuBarSettingsPage(settings: settings, bridge: bridge)
+        case .switcher: AppSwitcherSettingsPage(settings: settings)
         case .clipboard: ClipboardSettingsPage(settings: settings, bridge: bridge)
         case .windows: WindowSettingsPage(settings: settings)
         case .system: SystemMonitorSettingsPage(settings: settings, bridge: bridge)
@@ -535,6 +540,44 @@ private struct WindowSettingsPage: View {
                 Text("Atalhos")
             } footer: {
                 Text("Clique num atalho e digite a nova combinação. ⌫ desativa, ⎋ cancela.")
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct AppSwitcherSettingsPage: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        Form {
+            ModuleToggleSection(settings: settings, section: .switcher, summary: "⌥⇥ mostra todas as janelas abertas e troca entre elas, como o AltTab.")
+
+            Section {
+                LabeledContent("Atalho") {
+                    ShortcutRecorder(
+                        combo: $settings.values.appSwitcher.activeShortcut,
+                        defaultCombo: AppSwitcherSettings.defaultShortcut
+                    )
+                }
+                Toggle("Incluir janelas minimizadas", isOn: $settings.values.appSwitcher.includesMinimized)
+                    .toggleStyle(.switch)
+                Picker("Mostrar o painel após", selection: $settings.values.appSwitcher.showDelayMilliseconds) {
+                    Text("Imediatamente").tag(0)
+                    Text("80 ms").tag(80)
+                    Text("120 ms").tag(120)
+                    Text("200 ms").tag(200)
+                    Text("300 ms").tag(300)
+                }
+                Picker("Tamanho dos ícones", selection: $settings.values.appSwitcher.iconSize) {
+                    Text("Pequeno").tag(48)
+                    Text("Médio").tag(64)
+                    Text("Grande").tag(88)
+                }
+            } header: {
+                Text("Atalho e painel")
+            } footer: {
+                Text("Segure a tecla modificadora e aperte o atalho para avançar; com ⇧ volta. Solte para trocar. ⌥⇥ rápido vai direto para a janela anterior sem mostrar o painel. Setas, Enter, ⎋ e clique também funcionam.")
             }
         }
         .formStyle(.grouped)
