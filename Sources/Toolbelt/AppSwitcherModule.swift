@@ -25,6 +25,9 @@ final class AppSwitcherModule: ToolbeltModule {
             self?.selectedIndex = index
             self?.commit()
         }
+        panel.onHover = { [weak self] index in
+            self?.selectedIndex = index
+        }
     }
 
     func stop() {
@@ -186,10 +189,18 @@ final class SwitcherPanel {
     private static let thumbnailTileWidth: CGFloat = 220
     private static let thumbnailHeight: CGFloat = 130
 
+    private static let hoverActivationDistance: CGFloat = 3
+    private static let selectionAnimationDuration: TimeInterval = 0.14
+
     private var window: SwitcherWindow?
     private var tiles: [SwitcherTile] = []
     private var thumbnailTask: Task<Void, Never>?
+    private let selectionView = NSView()
+    private var selectedTileIndex: Int?
+    private var mouseLocationAtShow = NSPoint.zero
+    private var isHoverActive = false
     var onSelect: ((Int) -> Void)?
+    var onHover: ((Int) -> Void)?
 
     func show(windows: [SwitchableWindow], selectedIndex: Int, iconSize: CGFloat, showsThumbnails: Bool) {
         close()
@@ -211,6 +222,16 @@ final class SwitcherPanel {
         background.layer?.cornerRadius = 16
         background.layer?.masksToBounds = true
 
+        selectionView.wantsLayer = true
+        selectionView.layer?.cornerRadius = 10
+        selectionView.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.35).cgColor
+        selectionView.layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.7).cgColor
+        selectionView.layer?.borderWidth = 1
+        background.addSubview(selectionView)
+        selectedTileIndex = nil
+        mouseLocationAtShow = NSEvent.mouseLocation
+        isHoverActive = false
+
         tiles = windows.enumerated().map { index, item in
             let column = index % columns
             let row = index / columns
@@ -222,6 +243,9 @@ final class SwitcherPanel {
             )
             let tile = SwitcherTile(frame: frame, window: item, iconSize: iconSize, thumbnailHeight: showsThumbnails ? Self.thumbnailHeight : nil) { [weak self] in
                 self?.onSelect?(index)
+            }
+            tile.onHover = { [weak self] in
+                self?.handleHover(index)
             }
             background.addSubview(tile)
             return tile
@@ -239,6 +263,7 @@ final class SwitcherPanel {
         panel.hasShadow = true
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+        panel.acceptsMouseMovedEvents = true
         panel.contentView = background
         panel.makeKeyAndOrderFront(nil)
         window = panel
@@ -257,9 +282,30 @@ final class SwitcherPanel {
     }
 
     func select(_ index: Int) {
-        for (tileIndex, tile) in tiles.enumerated() {
-            tile.isSelected = tileIndex == index
+        guard tiles.indices.contains(index), index != selectedTileIndex else { return }
+        let target = tiles[index].frame
+        if selectedTileIndex == nil {
+            selectionView.frame = target
+        } else {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = Self.selectionAnimationDuration
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                context.allowsImplicitAnimation = true
+                selectionView.animator().frame = target
+            }
         }
+        selectedTileIndex = index
+    }
+
+    private func handleHover(_ index: Int) {
+        if !isHoverActive {
+            let location = NSEvent.mouseLocation
+            let distance = hypot(location.x - mouseLocationAtShow.x, location.y - mouseLocationAtShow.y)
+            guard distance >= Self.hoverActivationDistance else { return }
+            isHoverActive = true
+        }
+        select(index)
+        onHover?(index)
     }
 
     func close() {
@@ -273,7 +319,7 @@ final class SwitcherPanel {
 
 private final class SwitcherTile: NSView {
     private let handler: () -> Void
-    private let highlight = NSView()
+    var onHover: (() -> Void)?
     private var thumbnailView: NSImageView?
     private var iconView: NSImageView?
     private let iconSize: CGFloat
@@ -290,23 +336,17 @@ private final class SwitcherTile: NSView {
         }
     }
 
-    var isSelected = false {
-        didSet {
-            highlight.layer?.backgroundColor = isSelected
-                ? NSColor.controlAccentColor.withAlphaComponent(0.35).cgColor
-                : NSColor.clear.cgColor
-        }
-    }
 
     init(frame: NSRect, window: SwitchableWindow, iconSize: CGFloat, thumbnailHeight: CGFloat?, handler: @escaping () -> Void) {
         self.handler = handler
         self.iconSize = iconSize
         super.init(frame: frame)
 
-        highlight.frame = bounds
-        highlight.wantsLayer = true
-        highlight.layer?.cornerRadius = 10
-        addSubview(highlight)
+        addTrackingArea(NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
+            owner: self
+        ))
 
         if let thumbnailHeight {
             let thumbnailView = NSImageView(frame: NSRect(x: 8, y: frame.height - thumbnailHeight - 8, width: frame.width - 16, height: thumbnailHeight))
@@ -347,6 +387,14 @@ private final class SwitcherTile: NSView {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is not supported")
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        onHover?()
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        onHover?()
     }
 
     override func mouseDown(with event: NSEvent) {
