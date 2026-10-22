@@ -315,9 +315,13 @@ struct SystemMonitorSettings: Codable, Equatable {
 
 struct AppSwitcherSettings: Codable, Equatable {
     static let defaultShortcut = KeyCombo(keyCode: 48, modifiers: KeyCombo.option)
+    static let defaultSameApplicationShortcut = KeyCombo(keyCode: 50, modifiers: KeyCombo.option)
 
     var shortcut = AppSwitcherSettings.defaultShortcut
     var isShortcutEnabled = true
+    var sameApplicationShortcut = AppSwitcherSettings.defaultSameApplicationShortcut
+    var isSameApplicationShortcutEnabled = true
+    var showsKeyHints = true
     var includesMinimized = true
     var showDelayMilliseconds = 120
     var iconSize = 64
@@ -329,6 +333,9 @@ struct AppSwitcherSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = AppSwitcherSettings()
         showsThumbnails = (try? container.decodeIfPresent(Bool.self, forKey: .showsThumbnails)) ?? defaults.showsThumbnails
+        sameApplicationShortcut = (try? container.decodeIfPresent(KeyCombo.self, forKey: .sameApplicationShortcut)) ?? defaults.sameApplicationShortcut
+        isSameApplicationShortcutEnabled = (try? container.decodeIfPresent(Bool.self, forKey: .isSameApplicationShortcutEnabled)) ?? defaults.isSameApplicationShortcutEnabled
+        showsKeyHints = (try? container.decodeIfPresent(Bool.self, forKey: .showsKeyHints)) ?? defaults.showsKeyHints
         shortcut = (try? container.decodeIfPresent(KeyCombo.self, forKey: .shortcut)) ?? defaults.shortcut
         isShortcutEnabled = (try? container.decodeIfPresent(Bool.self, forKey: .isShortcutEnabled)) ?? defaults.isShortcutEnabled
         includesMinimized = (try? container.decodeIfPresent(Bool.self, forKey: .includesMinimized)) ?? defaults.includesMinimized
@@ -342,6 +349,16 @@ struct AppSwitcherSettings: Codable, Equatable {
             isShortcutEnabled = newValue != nil
             if let newValue {
                 shortcut = newValue
+            }
+        }
+    }
+
+    var activeSameApplicationShortcut: KeyCombo? {
+        get { isSameApplicationShortcutEnabled ? sameApplicationShortcut : nil }
+        set {
+            isSameApplicationShortcutEnabled = newValue != nil
+            if let newValue {
+                sameApplicationShortcut = newValue
             }
         }
     }

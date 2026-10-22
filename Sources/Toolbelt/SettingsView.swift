@@ -593,12 +593,20 @@ private struct AppSwitcherSettingsPage: View {
             ModuleToggleSection(settings: settings, section: .switcher, summary: "⌥⇥ mostra todas as janelas abertas e troca entre elas, como o AltTab.")
 
             Section {
-                LabeledContent("Atalho") {
+                LabeledContent("Todas as janelas") {
                     ShortcutRecorder(
                         combo: $settings.values.appSwitcher.activeShortcut,
                         defaultCombo: AppSwitcherSettings.defaultShortcut
                     )
                 }
+                LabeledContent("Só janelas do app atual") {
+                    ShortcutRecorder(
+                        combo: $settings.values.appSwitcher.activeSameApplicationShortcut,
+                        defaultCombo: AppSwitcherSettings.defaultSameApplicationShortcut
+                    )
+                }
+                Toggle("Mostrar as teclas de ação no rodapé do painel", isOn: $settings.values.appSwitcher.showsKeyHints)
+                    .toggleStyle(.switch)
                 Toggle("Incluir janelas minimizadas", isOn: $settings.values.appSwitcher.includesMinimized)
                     .toggleStyle(.switch)
                 Picker("Mostrar o painel após", selection: $settings.values.appSwitcher.showDelayMilliseconds) {
@@ -616,7 +624,7 @@ private struct AppSwitcherSettingsPage: View {
             } header: {
                 Text("Atalho e painel")
             } footer: {
-                Text("Segure a tecla modificadora e aperte o atalho para avançar; com ⇧ volta. Solte para trocar. ⌥⇥ rápido vai direto para a janela anterior sem mostrar o painel. Setas, Enter, ⎋ e clique também funcionam.")
+                Text("Segure a tecla modificadora e aperte o atalho para avançar; com ⇧ volta. Solte para trocar. ⌥⇥ rápido vai direto para a janela anterior. Com o painel aberto: W fecha a janela, M minimiza, H esconde o app, Q fecha o app e / abre a busca (aí pode soltar o ⌥, digitar e confirmar com ⏎). O mouse também seleciona e clicar troca.")
             }
 
             Section {
@@ -643,7 +651,7 @@ private struct AppSwitcherSettingsPage: View {
             } header: {
                 Text("Miniaturas")
             } footer: {
-                Text("O painel abre na hora com os ícones e as miniaturas aparecem em seguida. Usa a permissão de Gravação de Tela só para isso; nada é gravado nem guardado.")
+                Text("Ao sair de uma janela, o Toolbelt tira um print pequeno dela; assim o ⌥⇥ já abre com as prévias e atualiza em seguida. Guarda no máximo 24 prévias na memória (~6 MB), nada vai para o disco. Usa a permissão de Gravação de Tela só para isso.")
             }
         }
         .formStyle(.grouped)

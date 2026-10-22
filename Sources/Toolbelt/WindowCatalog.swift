@@ -17,6 +17,32 @@ struct SwitchableWindow {
         title.isEmpty ? applicationName : title
     }
 
+    func matches(_ query: String) -> Bool {
+        let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
+        return applicationName.range(of: query, options: options) != nil || title.range(of: query, options: options) != nil
+    }
+
+    func minimize() -> SwitchableWindow {
+        AXUIElementSetAttributeValue(element, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
+        return SwitchableWindow(
+            windowID: windowID,
+            processIdentifier: processIdentifier,
+            element: element,
+            title: title,
+            applicationName: applicationName,
+            icon: icon,
+            isMinimized: true,
+            frame: frame
+        )
+    }
+
+    func close() {
+        var button: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXCloseButtonAttribute as CFString, &button) == .success,
+              let button, CFGetTypeID(button) == AXUIElementGetTypeID() else { return }
+        AXUIElementPerformAction(button as! AXUIElement, kAXPressAction as CFString)
+    }
+
     func focus() {
         if isMinimized {
             AXUIElementSetAttributeValue(element, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
@@ -55,6 +81,14 @@ enum WindowCatalog {
         guard includingMinimized else { return visible }
         let minimized = all.filter { $0.isMinimized }
         return visible + minimized
+    }
+
+    static func frontWindowID(of processIdentifier: pid_t) -> CGWindowID? {
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        let windows = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+        return windows.first {
+            ($0[kCGWindowOwnerPID as String] as? pid_t) == processIdentifier && ($0[kCGWindowLayer as String] as? Int) == 0
+        }?[kCGWindowNumber as String] as? CGWindowID
     }
 
     private static func onScreenWindowOrder() -> [CGWindowID: Int] {

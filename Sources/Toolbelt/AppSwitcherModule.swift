@@ -7,17 +7,28 @@ final class AppSwitcherModule: ToolbeltModule {
     let symbolName = "rectangle.on.rectangle"
     let requiresAccessibility = true
 
+    private static let keyHints = "W fechar · M minimizar · H esconder app · Q fechar app · / buscar"
+    private static let cachedThumbnailSize = CGSize(width: 204, height: 130)
+
     private let panel = SwitcherPanel()
+    private let thumbnailCache = ThumbnailCache()
     private var hotKeyIdentifiers: [UInt32] = []
     private var registeredSettings: AppSwitcherSettings?
+    private var allWindows: [SwitchableWindow] = []
     private var windows: [SwitchableWindow] = []
     private var selectedIndex = 0
     private var isSwitching = false
+    private var isSearching = false
+    private var query = ""
+    private var activeModifiers: NSEvent.ModifierFlags = []
     private var showWorkItem: DispatchWorkItem?
     private var modifierMonitors: [Any] = []
     private var keyMonitor: Any?
+    private var activationObserver: NSObjectProtocol?
+    private var lastActiveProcess: pid_t?
 
     private var settings: AppSwitcherSettings { AppSettings.shared.values.appSwitcher }
+    private var showsThumbnails: Bool { settings.showsThumbnails && ScreenRecordingPermission.isGranted }
 
     func start() {
         registerHotKeys()
@@ -28,31 +39,64 @@ final class AppSwitcherModule: ToolbeltModule {
         panel.onHover = { [weak self] index in
             self?.selectedIndex = index
         }
+        lastActiveProcess = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.applicationDidActivate(notification)
+        }
     }
 
     func stop() {
         cancel()
         unregisterHotKeys()
+        if let activationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
+        }
+        activationObserver = nil
+        thumbnailCache.clear()
     }
 
     func settingsDidChange() {
+        if !settings.showsThumbnails {
+            thumbnailCache.clear()
+        }
         guard registeredSettings != settings else { return }
         unregisterHotKeys()
         registerHotKeys()
     }
 
+    private func applicationDidActivate(_ notification: Notification) {
+        let previous = lastActiveProcess
+        lastActiveProcess = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
+        guard showsThumbnails, !isSwitching, let previous, previous != ProcessInfo.processInfo.processIdentifier,
+              let windowID = WindowCatalog.frontWindowID(of: previous) else { return }
+        _ = WindowThumbnails.capture(windowIDs: [windowID], maximumSize: Self.cachedThumbnailSize) { [weak self] identifier, image in
+            self?.thumbnailCache.store(image, for: identifier)
+        }
+    }
+
     private func registerHotKeys() {
         let current = settings
         registeredSettings = current
-        guard let combo = current.activeShortcut else { return }
-        if let forward = HotKeyCenter.shared.register(combo, handler: { [weak self] in self?.advance(by: 1) }) {
+        if let combo = current.activeShortcut {
+            registerPair(combo) { [weak self] step in self?.advance(by: step, sameApplication: false) }
+        }
+        if let combo = current.activeSameApplicationShortcut {
+            registerPair(combo) { [weak self] step in self?.advance(by: step, sameApplication: true) }
+        }
+    }
+
+    private func registerPair(_ combo: KeyCombo, handler: @escaping (Int) -> Void) {
+        if let forward = HotKeyCenter.shared.register(combo, handler: { handler(1) }) {
             hotKeyIdentifiers.append(forward)
         }
-        if combo.modifiers & KeyCombo.shift == 0 {
-            let reverse = KeyCombo(keyCode: combo.keyCode, modifiers: combo.modifiers | KeyCombo.shift)
-            if let backward = HotKeyCenter.shared.register(reverse, handler: { [weak self] in self?.advance(by: -1) }) {
-                hotKeyIdentifiers.append(backward)
-            }
+        guard combo.modifiers & KeyCombo.shift == 0 else { return }
+        let reverse = KeyCombo(keyCode: combo.keyCode, modifiers: combo.modifiers | KeyCombo.shift)
+        if let backward = HotKeyCenter.shared.register(reverse, handler: { handler(-1) }) {
+            hotKeyIdentifiers.append(backward)
         }
     }
 
@@ -62,52 +106,79 @@ final class AppSwitcherModule: ToolbeltModule {
         registeredSettings = nil
     }
 
-    private func advance(by step: Int) {
+    private func advance(by step: Int, sameApplication: Bool) {
         guard AccessibilityPermission.isTrusted else {
             AccessibilityPermission.requestIfNeeded()
             return
         }
         if !isSwitching {
-            begin(step: step)
+            begin(step: step, sameApplication: sameApplication)
             return
         }
+        move(by: step)
+    }
+
+    private func move(by step: Int) {
         guard !windows.isEmpty else { return }
         selectedIndex = (selectedIndex + step + windows.count) % windows.count
         panel.select(selectedIndex)
     }
 
-    private func begin(step: Int) {
-        windows = WindowCatalog.windows(includingMinimized: settings.includesMinimized)
-        guard !windows.isEmpty else { return }
+    private func begin(step: Int, sameApplication: Bool) {
+        var found = WindowCatalog.windows(includingMinimized: settings.includesMinimized)
+        if sameApplication, let frontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier {
+            found = found.filter { $0.processIdentifier == frontmost }
+        }
+        guard !found.isEmpty else { return }
+        allWindows = found
+        windows = found
+        query = ""
+        isSearching = false
         isSwitching = true
         selectedIndex = windows.count > 1 ? (step > 0 ? 1 : windows.count - 1) : 0
+        let shortcut = sameApplication ? settings.sameApplicationShortcut : settings.shortcut
+        activeModifiers = Self.modifierFlags(from: shortcut.modifiers).subtracting(.shift)
         watchModifierRelease()
-        let requiredFlags = Self.modifierFlags(from: settings.shortcut.modifiers).subtracting(.shift)
-        guard requiredFlags.isSubset(of: NSEvent.modifierFlags.intersection([.command, .option, .control])) else {
+        guard activeModifiers.isSubset(of: NSEvent.modifierFlags.intersection([.command, .option, .control])) else {
             commit()
             return
         }
 
         let work = DispatchWorkItem { [weak self] in
             guard let self, self.isSwitching else { return }
-            self.panel.show(
-                windows: self.windows,
-                selectedIndex: self.selectedIndex,
-                iconSize: CGFloat(self.settings.iconSize),
-                showsThumbnails: self.settings.showsThumbnails && ScreenRecordingPermission.isGranted
-            )
+            self.render(capturingLiveThumbnails: true)
             self.watchKeys()
         }
         showWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(settings.showDelayMilliseconds), execute: work)
     }
 
+    private func render(capturingLiveThumbnails: Bool) {
+        let footer: String
+        if isSearching {
+            footer = query.isEmpty ? "Digite para buscar · ⏎ trocar · ⎋ fechar" : "Buscar: \(query)  ·  ⏎ trocar · ⌫ apagar · ⎋ fechar"
+        } else {
+            footer = settings.showsKeyHints ? Self.keyHints : ""
+        }
+        panel.show(
+            windows: windows,
+            selectedIndex: selectedIndex,
+            iconSize: CGFloat(settings.iconSize),
+            showsThumbnails: showsThumbnails,
+            cachedThumbnails: thumbnailCache.all,
+            footer: footer,
+            emptyMessage: isSearching ? "Nada encontrado para “\(query)”" : nil,
+            capturesLiveThumbnails: capturingLiveThumbnails
+        ) { [weak self] identifier, image in
+            self?.thumbnailCache.store(image, for: identifier)
+        }
+    }
+
     private func watchModifierRelease() {
-        let requiredFlags = Self.modifierFlags(from: settings.shortcut.modifiers).subtracting(.shift)
         let handler: (NSEvent) -> Void = { [weak self] event in
-            guard let self, self.isSwitching else { return }
+            guard let self, self.isSwitching, !self.isSearching else { return }
             let held = event.modifierFlags.intersection([.command, .option, .control])
-            if !requiredFlags.isSubset(of: held) {
+            if !self.activeModifiers.isSubset(of: held) {
                 self.commit()
             }
         }
@@ -125,20 +196,110 @@ final class AppSwitcherModule: ToolbeltModule {
     private func watchKeys() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.isSwitching else { return event }
-            switch event.keyCode {
-            case 53:
-                self.cancel()
-            case 36, 76:
-                self.commit()
-            case 123, 126:
-                self.advance(by: -1)
-            case 124, 125:
-                self.advance(by: 1)
-            default:
-                break
-            }
+            self.handleKey(event)
             return nil
         }
+    }
+
+    private func handleKey(_ event: NSEvent) {
+        switch event.keyCode {
+        case 53:
+            cancel()
+            return
+        case 36, 76:
+            commit()
+            return
+        case 123, 126:
+            move(by: -1)
+            return
+        case 124, 125:
+            move(by: 1)
+            return
+        default:
+            break
+        }
+        let character = (event.charactersIgnoringModifiers ?? "").lowercased()
+        if isSearching {
+            if event.keyCode == 51 {
+                guard !query.isEmpty else { return }
+                query.removeLast()
+            } else if !character.isEmpty, character.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) }) {
+                query += character
+            } else {
+                return
+            }
+            applyQuery()
+            return
+        }
+        switch character {
+        case "/":
+            isSearching = true
+            render(capturingLiveThumbnails: false)
+        case "w":
+            performOnSelection { window in
+                window.close()
+                return nil
+            }
+        case "m":
+            performOnSelection { window in
+                window.isMinimized ? window : window.minimize()
+            }
+        case "h":
+            removeApplicationOfSelection { NSRunningApplication(processIdentifier: $0)?.hide() }
+        case "q":
+            removeApplicationOfSelection { NSRunningApplication(processIdentifier: $0)?.terminate() }
+        default:
+            break
+        }
+    }
+
+    private func applyQuery() {
+        windows = query.isEmpty ? allWindows : allWindows.filter { $0.matches(query) }
+        selectedIndex = 0
+        render(capturingLiveThumbnails: false)
+    }
+
+    private func performOnSelection(_ action: (SwitchableWindow) -> SwitchableWindow?) {
+        guard windows.indices.contains(selectedIndex) else { return }
+        let target = windows[selectedIndex]
+        let replacement = action(target)
+        replace(target, with: replacement)
+    }
+
+    private func removeApplicationOfSelection(_ action: (pid_t) -> Void) {
+        guard windows.indices.contains(selectedIndex) else { return }
+        let processIdentifier = windows[selectedIndex].processIdentifier
+        action(processIdentifier)
+        allWindows.removeAll { $0.processIdentifier == processIdentifier }
+        windows.removeAll { $0.processIdentifier == processIdentifier }
+        refreshAfterChange()
+    }
+
+    private func replace(_ window: SwitchableWindow, with replacement: SwitchableWindow?) {
+        for index in allWindows.indices.reversed() where allWindows[index].windowID == window.windowID {
+            if let replacement {
+                allWindows[index] = replacement
+            } else {
+                allWindows.remove(at: index)
+            }
+        }
+        for index in windows.indices.reversed() where windows[index].windowID == window.windowID {
+            if let replacement {
+                windows[index] = replacement
+            } else {
+                windows.remove(at: index)
+            }
+        }
+        refreshAfterChange()
+    }
+
+    private func refreshAfterChange() {
+        guard !allWindows.isEmpty else {
+            cancel()
+            return
+        }
+        selectedIndex = min(selectedIndex, max(windows.count - 1, 0))
+        render(capturingLiveThumbnails: false)
     }
 
     private func commit() {
@@ -155,6 +316,8 @@ final class AppSwitcherModule: ToolbeltModule {
 
     private func finish() {
         isSwitching = false
+        isSearching = false
+        query = ""
         showWorkItem?.cancel()
         showWorkItem = nil
         modifierMonitors.forEach(NSEvent.removeMonitor)
@@ -165,6 +328,7 @@ final class AppSwitcherModule: ToolbeltModule {
         keyMonitor = nil
         panel.close()
         windows.removeAll()
+        allWindows.removeAll()
     }
 
     private static func modifierFlags(from carbonModifiers: UInt32) -> NSEvent.ModifierFlags {
@@ -185,6 +349,8 @@ final class SwitcherPanel {
     private static let tileWidth: CGFloat = 132
     private static let tileSpacing: CGFloat = 8
     private static let padding: CGFloat = 14
+    private static let footerHeight: CGFloat = 22
+    private static let minimumWidth: CGFloat = 420
 
     private static let thumbnailTileWidth: CGFloat = 220
     private static let thumbnailHeight: CGFloat = 130
@@ -202,17 +368,33 @@ final class SwitcherPanel {
     var onSelect: ((Int) -> Void)?
     var onHover: ((Int) -> Void)?
 
-    func show(windows: [SwitchableWindow], selectedIndex: Int, iconSize: CGFloat, showsThumbnails: Bool) {
+    func show(
+        windows: [SwitchableWindow],
+        selectedIndex: Int,
+        iconSize: CGFloat,
+        showsThumbnails: Bool,
+        cachedThumbnails: [CGWindowID: NSImage],
+        footer: String,
+        emptyMessage: String?,
+        capturesLiveThumbnails: Bool,
+        onLiveThumbnail: @escaping (CGWindowID, NSImage) -> Void
+    ) {
+        let previousMouseLocation = window == nil ? NSEvent.mouseLocation : mouseLocationAtShow
+        let wasHoverActive = window != nil && isHoverActive
         close()
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         let bounds = screen?.visibleFrame ?? .zero
         let tileWidth = showsThumbnails ? Self.thumbnailTileWidth : Self.tileWidth
         let tileHeight = showsThumbnails ? Self.thumbnailHeight + 48 : iconSize + 52
         let maximumColumns = max(1, Int((bounds.width * 0.9 - Self.padding * 2 + Self.tileSpacing) / (tileWidth + Self.tileSpacing)))
-        let columns = min(windows.count, maximumColumns)
-        let rows = Int(ceil(Double(windows.count) / Double(columns)))
-        let width = CGFloat(columns) * tileWidth + CGFloat(columns - 1) * Self.tileSpacing + Self.padding * 2
-        let height = CGFloat(rows) * tileHeight + CGFloat(rows - 1) * Self.tileSpacing + Self.padding * 2
+        let columns = max(1, min(windows.count, maximumColumns))
+        let rows = max(1, Int(ceil(Double(windows.count) / Double(columns))))
+        let footerSpace = footer.isEmpty ? 0 : Self.footerHeight
+        let gridWidth = CGFloat(columns) * tileWidth + CGFloat(columns - 1) * Self.tileSpacing + Self.padding * 2
+        let width = max(gridWidth, footer.isEmpty && emptyMessage == nil ? 0 : Self.minimumWidth)
+        let gridHeight = CGFloat(rows) * tileHeight + CGFloat(rows - 1) * Self.tileSpacing
+        let height = gridHeight + Self.padding * 2 + footerSpace
+        let gridOriginX = (width - gridWidth) / 2
 
         let background = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: width, height: height))
         background.material = .hudWindow
@@ -227,16 +409,17 @@ final class SwitcherPanel {
         selectionView.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.35).cgColor
         selectionView.layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.7).cgColor
         selectionView.layer?.borderWidth = 1
+        selectionView.isHidden = windows.isEmpty
         background.addSubview(selectionView)
         selectedTileIndex = nil
-        mouseLocationAtShow = NSEvent.mouseLocation
-        isHoverActive = false
+        mouseLocationAtShow = previousMouseLocation
+        isHoverActive = wasHoverActive
 
         tiles = windows.enumerated().map { index, item in
             let column = index % columns
             let row = index / columns
             let frame = NSRect(
-                x: Self.padding + CGFloat(column) * (tileWidth + Self.tileSpacing),
+                x: gridOriginX + Self.padding + CGFloat(column) * (tileWidth + Self.tileSpacing),
                 y: height - Self.padding - CGFloat(row + 1) * tileHeight - CGFloat(row) * Self.tileSpacing,
                 width: tileWidth,
                 height: tileHeight
@@ -247,8 +430,29 @@ final class SwitcherPanel {
             tile.onHover = { [weak self] in
                 self?.handleHover(index)
             }
+            if showsThumbnails, let cached = cachedThumbnails[item.windowID] {
+                tile.thumbnail = cached
+            }
             background.addSubview(tile)
             return tile
+        }
+
+        if let emptyMessage, windows.isEmpty {
+            let label = NSTextField(labelWithString: emptyMessage)
+            label.alignment = .center
+            label.textColor = .secondaryLabelColor
+            label.frame = NSRect(x: 0, y: footerSpace + Self.padding + gridHeight / 2 - 10, width: width, height: 20)
+            background.addSubview(label)
+        }
+
+        if !footer.isEmpty {
+            let footerLabel = NSTextField(labelWithString: footer)
+            footerLabel.alignment = .center
+            footerLabel.font = .systemFont(ofSize: 11)
+            footerLabel.textColor = .secondaryLabelColor
+            footerLabel.lineBreakMode = .byTruncatingTail
+            footerLabel.frame = NSRect(x: 10, y: 8, width: width - 20, height: 16)
+            background.addSubview(footerLabel)
         }
 
         let panel = SwitcherWindow(
@@ -269,15 +473,15 @@ final class SwitcherPanel {
         window = panel
         select(selectedIndex)
 
-        if showsThumbnails {
-            let tilesByWindow = Dictionary(uniqueKeysWithValues: zip(windows.map(\.windowID), tiles))
-            let visibleWindowIDs = windows.filter { !$0.isMinimized }.map(\.windowID)
-            thumbnailTask = WindowThumbnails.capture(
-                windowIDs: visibleWindowIDs,
-                maximumSize: CGSize(width: tileWidth - 16, height: Self.thumbnailHeight)
-            ) { identifier, image in
-                tilesByWindow[identifier]?.thumbnail = image
-            }
+        guard showsThumbnails, capturesLiveThumbnails else { return }
+        let tilesByWindow = Dictionary(uniqueKeysWithValues: zip(windows.map(\.windowID), tiles))
+        let visibleWindowIDs = windows.filter { !$0.isMinimized }.map(\.windowID)
+        thumbnailTask = WindowThumbnails.capture(
+            windowIDs: visibleWindowIDs,
+            maximumSize: CGSize(width: tileWidth - 16, height: Self.thumbnailHeight)
+        ) { identifier, image in
+            tilesByWindow[identifier]?.thumbnail = image
+            onLiveThumbnail(identifier, image)
         }
     }
 
@@ -336,7 +540,6 @@ private final class SwitcherTile: NSView {
         }
     }
 
-
     init(frame: NSRect, window: SwitchableWindow, iconSize: CGFloat, thumbnailHeight: CGFloat?, handler: @escaping () -> Void) {
         self.handler = handler
         self.iconSize = iconSize
@@ -380,7 +583,7 @@ private final class SwitcherTile: NSView {
         titleLabel.font = .systemFont(ofSize: 11, weight: .medium)
         titleLabel.maximumNumberOfLines = 2
         titleLabel.lineBreakMode = .byTruncatingTail
-        titleLabel.textColor = .labelColor
+        titleLabel.textColor = window.isMinimized ? .secondaryLabelColor : .labelColor
         addSubview(titleLabel)
         toolTip = "\(window.applicationName) — \(window.displayTitle)"
     }
