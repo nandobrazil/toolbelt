@@ -5,10 +5,8 @@ final class ClipboardModule: ToolbeltModule {
     let title = "Área de transferência"
     let requiresAccessibility = true
 
-    private static let historyLimit = 40
-    private static let pickerLimit = 10
-    private static let previewLength = 60
     private static let pasteCombo = KeyCombo(keyCode: 9, modifiers: KeyCombo.option | KeyCombo.command, display: "⌥⌘V")
+    private static let pasteDelay: TimeInterval = 0.05
     private static let ignoredTypes: Set<String> = [
         "org.nspasteboard.ConcealedType",
         "org.nspasteboard.TransientType",
@@ -17,25 +15,32 @@ final class ClipboardModule: ToolbeltModule {
         "com.apple.is-remote-clipboard"
     ]
 
-    private let storeURL = AppPaths.support.appendingPathComponent("clipboard-history.json")
-    private var history: [String] = []
+    private let store = ClipboardStore()
+    private lazy var picker = ClipboardPicker(store: store)
+    private let screenshotWatcher = ScreenshotWatcher()
     private var lastChangeCount = NSPasteboard.general.changeCount
     private var pollTimer: Timer?
     private var hotKeyIdentifier: UInt32?
 
     func start() {
-        loadHistory()
+        store.load()
         lastChangeCount = NSPasteboard.general.changeCount
         pollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.capturePasteboardChange()
         }
+        screenshotWatcher.onScreenshot = { [weak self] url in
+            self?.captureScreenshotFile(url)
+        }
+        screenshotWatcher.start()
         hotKeyIdentifier = HotKeyCenter.shared.register(Self.pasteCombo) { [weak self] in
-            self?.showPicker()
+            self?.togglePicker()
         }
     }
 
     func stop() {
         pollTimer?.invalidate()
+        screenshotWatcher.stop()
+        picker.close()
         if let hotKeyIdentifier {
             HotKeyCenter.shared.unregister(hotKeyIdentifier)
         }
@@ -43,23 +48,26 @@ final class ClipboardModule: ToolbeltModule {
     }
 
     func menuItems() -> [NSMenuItem] {
-        let historyItem = NSMenuItem(title: "Histórico (\(Self.pasteCombo.display))", action: nil, keyEquivalent: "")
-        let submenu = NSMenu()
-        if history.isEmpty {
-            submenu.addItem(disabledMenuItem("Vazio"))
+        let imageCount = store.entries.filter { $0.kind == .image }.count
+        return [
+            ActionMenuItem(title: "Histórico da área de transferência\t\(Self.pasteCombo.display)") { [weak self] in
+                self?.togglePicker()
+            },
+            disabledMenuItem("     \(store.entries.count) itens, \(imageCount) imagens"),
+            ActionMenuItem(title: "Limpar histórico") { [weak self] in
+                self?.store.clear()
+            }
+        ]
+    }
+
+    private func togglePicker() {
+        if picker.isVisible {
+            picker.close()
+            return
         }
-        for entry in history {
-            submenu.addItem(ActionMenuItem(title: preview(entry)) { [weak self] in
-                self?.copyToPasteboard(entry)
-            })
+        picker.show { [weak self] entry in
+            self?.paste(entry)
         }
-        submenu.addItem(.separator())
-        submenu.addItem(ActionMenuItem(title: "Limpar histórico") { [weak self] in
-            self?.history.removeAll()
-            self?.saveHistory()
-        })
-        historyItem.submenu = submenu
-        return [historyItem]
     }
 
     private func capturePasteboardChange() {
@@ -68,49 +76,51 @@ final class ClipboardModule: ToolbeltModule {
         lastChangeCount = pasteboard.changeCount
         let types = Set((pasteboard.types ?? []).map(\.rawValue))
         guard types.isDisjoint(with: Self.ignoredTypes) else { return }
-        guard let text = pasteboard.string(forType: .string),
-              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        remember(text)
-    }
 
-    private func remember(_ text: String) {
-        history.removeAll { $0 == text }
-        history.insert(text, at: 0)
-        if history.count > Self.historyLimit {
-            history.removeLast(history.count - Self.historyLimit)
+        if let text = pasteboard.string(forType: .string),
+           !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            store.addText(text)
+            return
         }
-        saveHistory()
+        guard !types.contains(NSPasteboard.PasteboardType.fileURL.rawValue) else { return }
+        if let png = pasteboard.data(forType: .png) {
+            store.addImage(pngData: png)
+        } else if let tiff = pasteboard.data(forType: .tiff), let png = Self.pngData(from: tiff) {
+            store.addImage(pngData: png)
+        }
     }
 
-    private func showPicker() {
-        guard !history.isEmpty else { return }
-        let previousApplication = NSWorkspace.shared.frontmostApplication
-        let menu = NSMenu()
-        var chosenEntry: String?
-        for (index, entry) in history.prefix(Self.pickerLimit).enumerated() {
-            let shortcut = index < 9 ? "\(index + 1)" : (index == 9 ? "0" : "")
-            let item = ActionMenuItem(title: preview(entry), keyEquivalent: shortcut) {
-                chosenEntry = entry
+    private func captureScreenshotFile(_ url: URL) {
+        guard let data = try? Data(contentsOf: url) else { return }
+        let png = url.pathExtension.lowercased() == "png" ? data : Self.pngData(from: data)
+        if let png {
+            store.addImage(pngData: png)
+        }
+    }
+
+    private func paste(_ entry: ClipboardEntry) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        switch entry.kind {
+        case .text:
+            pasteboard.setString(entry.text ?? "", forType: .string)
+        case .image:
+            guard let url = store.imageURL(for: entry), let png = try? Data(contentsOf: url) else { return }
+            pasteboard.setData(png, forType: .png)
+            if let tiff = NSImage(data: png)?.tiffRepresentation {
+                pasteboard.setData(tiff, forType: .tiff)
             }
-            item.keyEquivalentModifierMask = []
-            menu.addItem(item)
         }
-        NSApp.activate(ignoringOtherApps: true)
-        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
-        previousApplication?.activate()
-        guard let chosenEntry else { return }
-        copyToPasteboard(chosenEntry)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        lastChangeCount = pasteboard.changeCount
+        store.promote(entry)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.pasteDelay) {
             Self.postPasteShortcut()
         }
     }
 
-    private func copyToPasteboard(_ text: String) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-        lastChangeCount = pasteboard.changeCount
-        remember(text)
+    private static func pngData(from imageData: Data) -> Data? {
+        guard let bitmap = NSBitmapImageRep(data: imageData) else { return nil }
+        return bitmap.representation(using: .png, properties: [:])
     }
 
     private static func postPasteShortcut() {
@@ -125,31 +135,5 @@ final class ClipboardModule: ToolbeltModule {
         keyUp?.flags = .maskCommand
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
-    }
-
-    private func preview(_ text: String) -> String {
-        let singleLine = text
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-            .joined(separator: " ⏎ ")
-        guard singleLine.count > Self.previewLength else { return singleLine }
-        return String(singleLine.prefix(Self.previewLength)) + "…"
-    }
-
-    private func loadHistory() {
-        guard let data = try? Data(contentsOf: storeURL),
-              let stored = try? JSONDecoder().decode([String].self, from: data) else { return }
-        history = Array(stored.prefix(Self.historyLimit))
-    }
-
-    private func saveHistory() {
-        guard let data = try? JSONEncoder().encode(history) else { return }
-        do {
-            try data.write(to: storeURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: storeURL.path)
-        } catch {
-            NSLog("Toolbelt: failed to save clipboard history: \(error)")
-        }
     }
 }

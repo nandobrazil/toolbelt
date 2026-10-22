@@ -1,0 +1,132 @@
+import AppKit
+import CryptoKit
+
+struct ClipboardEntry: Codable, Equatable {
+    enum Kind: String, Codable {
+        case text
+        case image
+    }
+
+    let id: UUID
+    let kind: Kind
+    let text: String?
+    let imageFileName: String?
+    let imageHash: String?
+    let createdAt: Date
+
+    static func text(_ value: String) -> ClipboardEntry {
+        ClipboardEntry(id: UUID(), kind: .text, text: value, imageFileName: nil, imageHash: nil, createdAt: Date())
+    }
+}
+
+final class ClipboardStore {
+    private static let historyLimit = 40
+
+    private let directory = AppPaths.support
+    private lazy var imagesDirectory: URL = {
+        let url = directory.appendingPathComponent("clipboard-images", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }()
+    private lazy var indexURL = directory.appendingPathComponent("clipboard-history-v2.json")
+    private var thumbnailCache: [UUID: NSImage] = [:]
+    private(set) var entries: [ClipboardEntry] = []
+    var onChange: (() -> Void)?
+
+    func load() {
+        if let data = try? Data(contentsOf: indexURL),
+           let stored = try? JSONDecoder().decode([ClipboardEntry].self, from: data) {
+            entries = stored.filter { $0.kind == .text || imageURL(for: $0).map(fileExists) == true }
+        } else {
+            migrateLegacyTextHistory()
+        }
+    }
+
+    func addText(_ text: String) {
+        entries.removeAll { $0.kind == .text && $0.text == text }
+        insert(.text(text))
+    }
+
+    func addImage(pngData: Data) {
+        let hash = SHA256.hash(data: pngData).map { String(format: "%02x", $0) }.joined()
+        if let existingIndex = entries.firstIndex(where: { $0.imageHash == hash }) {
+            let existing = entries.remove(at: existingIndex)
+            entries.insert(existing, at: 0)
+            save()
+            return
+        }
+        let fileName = "\(hash.prefix(24)).png"
+        do {
+            try pngData.write(to: imagesDirectory.appendingPathComponent(fileName), options: .atomic)
+        } catch {
+            NSLog("Toolbelt: failed to store clipboard image: \(error)")
+            return
+        }
+        insert(ClipboardEntry(id: UUID(), kind: .image, text: nil, imageFileName: fileName, imageHash: hash, createdAt: Date()))
+    }
+
+    func promote(_ entry: ClipboardEntry) {
+        guard let index = entries.firstIndex(of: entry) else { return }
+        entries.insert(entries.remove(at: index), at: 0)
+        save()
+    }
+
+    func clear() {
+        entries.forEach(deleteImageFile)
+        entries.removeAll()
+        thumbnailCache.removeAll()
+        save()
+    }
+
+    func imageURL(for entry: ClipboardEntry) -> URL? {
+        entry.imageFileName.map { imagesDirectory.appendingPathComponent($0) }
+    }
+
+    func thumbnail(for entry: ClipboardEntry) -> NSImage? {
+        if let cached = thumbnailCache[entry.id] {
+            return cached
+        }
+        guard let url = imageURL(for: entry), let image = NSImage(contentsOf: url) else { return nil }
+        thumbnailCache[entry.id] = image
+        return image
+    }
+
+    private func insert(_ entry: ClipboardEntry) {
+        entries.insert(entry, at: 0)
+        while entries.count > Self.historyLimit {
+            let removed = entries.removeLast()
+            deleteImageFile(removed)
+            thumbnailCache[removed.id] = nil
+        }
+        save()
+    }
+
+    private func deleteImageFile(_ entry: ClipboardEntry) {
+        guard let url = imageURL(for: entry) else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    private func fileExists(_ url: URL) -> Bool {
+        FileManager.default.fileExists(atPath: url.path)
+    }
+
+    private func migrateLegacyTextHistory() {
+        let legacyURL = directory.appendingPathComponent("clipboard-history.json")
+        guard let data = try? Data(contentsOf: legacyURL),
+              let texts = try? JSONDecoder().decode([String].self, from: data) else { return }
+        entries = texts.prefix(Self.historyLimit).map(ClipboardEntry.text)
+        save()
+        try? FileManager.default.removeItem(at: legacyURL)
+    }
+
+    private func save() {
+        onChange?()
+        guard let data = try? JSONEncoder().encode(entries) else { return }
+        do {
+            try data.write(to: indexURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: indexURL.path)
+        } catch {
+            NSLog("Toolbelt: failed to save clipboard history: \(error)")
+        }
+    }
+}
