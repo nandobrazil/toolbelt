@@ -5,14 +5,14 @@
     "semantic_hash": "00c266bfe66b9a3f41a6d78a77eb2974"
   },
   "Sources/Toolbelt/AppController.swift": {
-    "mtime": 1792691606.1110518,
-    "ast_hash": "d4c732b036cfb6cafc47ab80bfefd8eb",
-    "semantic_hash": "d4c732b036cfb6cafc47ab80bfefd8eb"
+    "mtime": 1792701494.3424246,
+    "ast_hash": "ad35c83102c9f65cca321d893d30464a",
+    "semantic_hash": "ad35c83102c9f65cca321d893d30464a"
   },
   "Sources/Toolbelt/AppSettings.swift": {
-    "mtime": 1792693473.1886177,
-    "ast_hash": "fbdc5c2effbaf798f4592b7e1ee83e66",
-    "semantic_hash": "fbdc5c2effbaf798f4592b7e1ee83e66"
+    "mtime": 1792701324.3856654,
+    "ast_hash": "89e29e03ed3d1f8b4e2db6d2a81df8f2",
+    "semantic_hash": "89e29e03ed3d1f8b4e2db6d2a81df8f2"
   },
   "Sources/Toolbelt/AppSwitcherModule.swift": {
     "mtime": 1792693534.7973952,
@@ -20,9 +20,9 @@
     "semantic_hash": "bbe2a2881d3e56ef3d1210367b4cbc9e"
   },
   "Sources/Toolbelt/ClaudeAccountsModule.swift": {
-    "mtime": 1792691585.5909028,
-    "ast_hash": "417760a9e42a49d1c8f1e0a3bb289c94",
-    "semantic_hash": "417760a9e42a49d1c8f1e0a3bb289c94"
+    "mtime": 1792701309.6153228,
+    "ast_hash": "d1e33b6d74f224eeb80f834ce0170f0a",
+    "semantic_hash": "d1e33b6d74f224eeb80f834ce0170f0a"
   },
   "Sources/Toolbelt/ClipboardArchive.swift": {
     "mtime": 1792682848.0466905,
@@ -50,9 +50,9 @@
     "semantic_hash": "0de5208851a96a97b6d3e654c34b1a4c"
   },
   "Sources/Toolbelt/HotKeyCenter.swift": {
-    "mtime": 1792681680.9475234,
-    "ast_hash": "d02f136a892c1219402bd70b0de9be2b",
-    "semantic_hash": "d02f136a892c1219402bd70b0de9be2b"
+    "mtime": 1792700728.761357,
+    "ast_hash": "dcb81a48fa4193831528db5356b7b4d8",
+    "semantic_hash": "dcb81a48fa4193831528db5356b7b4d8"
   },
   "Sources/Toolbelt/MenuBarExtras.swift": {
     "mtime": 1792684200.863514,
@@ -65,9 +65,9 @@
     "semantic_hash": "a1896cafbb0630debc3fb9013abf89c7"
   },
   "Sources/Toolbelt/PanelSections.swift": {
-    "mtime": 1792691558.4387276,
-    "ast_hash": "0fea86637db59b2142d425e946f6cc3d",
-    "semantic_hash": "0fea86637db59b2142d425e946f6cc3d"
+    "mtime": 1792701469.1980028,
+    "ast_hash": "f2ce0439cc0256ed093dc2a66fbf499c",
+    "semantic_hash": "f2ce0439cc0256ed093dc2a66fbf499c"
   },
   "Sources/Toolbelt/ScreenshotWatcher.swift": {
     "mtime": 1792679769.77488,
@@ -75,14 +75,14 @@
     "semantic_hash": "cc3e0d14b11ded23eabeec3df3f2bd75"
   },
   "Sources/Toolbelt/SettingsView.swift": {
-    "mtime": 1792693545.7616644,
-    "ast_hash": "fa8d1c6242728a1b4166663e47726f9e",
-    "semantic_hash": "fa8d1c6242728a1b4166663e47726f9e"
+    "mtime": 1792701494.3433986,
+    "ast_hash": "a60b8d9f36582ddb41a2312ba709e50f",
+    "semantic_hash": "a60b8d9f36582ddb41a2312ba709e50f"
   },
   "Sources/Toolbelt/SettingsWindowController.swift": {
-    "mtime": 1792681925.0743425,
-    "ast_hash": "5b09d35aa8679421e8bc3e5abaa4d73a",
-    "semantic_hash": "5b09d35aa8679421e8bc3e5abaa4d73a"
+    "mtime": 1792701494.3428614,
+    "ast_hash": "28d352dad0e958e4abb9c5cb7012ab32",
+    "semantic_hash": "28d352dad0e958e4abb9c5cb7012ab32"
   },
   "Sources/Toolbelt/ShortcutRecorder.swift": {
     "mtime": 1792681866.370577,
@@ -100,9 +100,9 @@
     "semantic_hash": "4791fc69fab75b78510352c14d075e76"
   },
   "Sources/Toolbelt/SystemReportWindow.swift": {
-    "mtime": 1792691192.02853,
-    "ast_hash": "b97bd5e2c76bf8b0248651aa0edbd4b4",
-    "semantic_hash": "b97bd5e2c76bf8b0248651aa0edbd4b4"
+    "mtime": 1792701309.615621,
+    "ast_hash": "0f03ae11e4990e3993f2ec144adf52e3",
+    "semantic_hash": "0f03ae11e4990e3993f2ec144adf52e3"
   },
   "Sources/Toolbelt/ToolbeltIcon.swift": {
     "mtime": 1792685152.2101865,
@@ -110,9 +110,9 @@
     "semantic_hash": "022fe17bb457d8999d2a08795dd01fb3"
   },
   "Sources/Toolbelt/ToolbeltModule.swift": {
-    "mtime": 1792681740.1171775,
-    "ast_hash": "b65b2f9f50a8e935c89270d78ff972cb",
-    "semantic_hash": "b65b2f9f50a8e935c89270d78ff972cb"
+    "mtime": 1792701309.614982,
+    "ast_hash": "b2725f050871811064c3bd650dfd48a2",
+    "semantic_hash": "b2725f050871811064c3bd650dfd48a2"
   },
   "Sources/Toolbelt/ToolbeltPanel.swift": {
     "mtime": 1792691574.7732694,
@@ -135,9 +135,9 @@
     "semantic_hash": "48007522555080dc38f47a6f618336f8"
   },
   "Sources/Toolbelt/main.swift": {
-    "mtime": 1792678701.2215261,
-    "ast_hash": "a9cfd38af614e5f7f3436f2c3ed5be37",
-    "semantic_hash": "a9cfd38af614e5f7f3436f2c3ed5be37"
+    "mtime": 1792701429.4322026,
+    "ast_hash": "86ef7a062f0113e68f17f47c3f2a1498",
+    "semantic_hash": "86ef7a062f0113e68f17f47c3f2a1498"
   },
   "bin/cca": {
     "mtime": 1792685635.2736812,
@@ -155,23 +155,98 @@
     "semantic_hash": "63b752e297cd04c073d5d7195b3d5f5b"
   },
   "scripts/install.sh": {
-    "mtime": 1792691657.6953466,
-    "ast_hash": "a7389965b33e9fc6693663ea6b717217",
-    "semantic_hash": "a7389965b33e9fc6693663ea6b717217"
+    "mtime": 1792701596.663719,
+    "ast_hash": "3f0a74b4790c1733e4f684907a833ed9",
+    "semantic_hash": "3f0a74b4790c1733e4f684907a833ed9"
   },
   "CLAUDE.md": {
-    "mtime": 1792694476.8216472,
-    "ast_hash": "4c1a1cb613e355795052d09df10c3963",
-    "semantic_hash": "4c1a1cb613e355795052d09df10c3963"
+    "mtime": 1792702280.7642534,
+    "ast_hash": "1aca1ff5548dfb788e03c0aa4622839d",
+    "semantic_hash": "1aca1ff5548dfb788e03c0aa4622839d"
   },
   "README.md": {
-    "mtime": 1792694467.6001024,
-    "ast_hash": "00c532e4af35f5995dc7b3b82b42830c",
-    "semantic_hash": "00c532e4af35f5995dc7b3b82b42830c"
+    "mtime": 1792702115.0565543,
+    "ast_hash": "d0d05e0cebe2b79f137bb81c4d3f016d",
+    "semantic_hash": "d0d05e0cebe2b79f137bb81c4d3f016d"
   },
   "docs/progress.md": {
-    "mtime": 1792694493.2155964,
-    "ast_hash": "e744d760be996f1062dc4bb92047a06c",
-    "semantic_hash": "e744d760be996f1062dc4bb92047a06c"
+    "mtime": 1792702280.7645016,
+    "ast_hash": "e0a53049bec6f3cd7d5fb858f6dd8363",
+    "semantic_hash": "e0a53049bec6f3cd7d5fb858f6dd8363"
+  },
+  "Sources/Toolbelt/AppUpdater.swift": {
+    "mtime": 1792701959.8590686,
+    "ast_hash": "88516d0b9ed759c6de62d5171c4c47c9",
+    "semantic_hash": "88516d0b9ed759c6de62d5171c4c47c9"
+  },
+  "Sources/Toolbelt/NativeWindowSwitching.swift": {
+    "mtime": 1792700723.6993527,
+    "ast_hash": "3f9ae2e18d7c0bacfd8ff2680afaf0ed",
+    "semantic_hash": "3f9ae2e18d7c0bacfd8ff2680afaf0ed"
+  },
+  "infra/deploy.sh": {
+    "mtime": 1792701775.5337756,
+    "ast_hash": "e380113522b8026e37776d3fb7d446aa",
+    "semantic_hash": "e380113522b8026e37776d3fb7d446aa"
+  },
+  "scripts/assemble-app.sh": {
+    "mtime": 1792701586.6043124,
+    "ast_hash": "71be13c2bf73c654f0425242e06fff64",
+    "semantic_hash": "71be13c2bf73c654f0425242e06fff64"
+  },
+  "scripts/make-icon.swift": {
+    "mtime": 1792701562.863807,
+    "ast_hash": "37e664251d01581733f9bd3709c9b56f",
+    "semantic_hash": "37e664251d01581733f9bd3709c9b56f"
+  },
+  "scripts/publish-release.sh": {
+    "mtime": 1792701926.3503509,
+    "ast_hash": "bb2df9c3d1154829ad204f952bf22f46",
+    "semantic_hash": "bb2df9c3d1154829ad204f952bf22f46"
+  },
+  "scripts/release.sh": {
+    "mtime": 1792701657.0420449,
+    "ast_hash": "f581fb8453ca348aa3e47213348157a6",
+    "semantic_hash": "f581fb8453ca348aa3e47213348157a6"
+  },
+  "site/assets/site.js": {
+    "mtime": 1792701793.2947876,
+    "ast_hash": "9db41450ee017ecc71d77b87aafbde12",
+    "semantic_hash": "9db41450ee017ecc71d77b87aafbde12"
+  },
+  ".github/workflows/deploy-site.yml": {
+    "mtime": 1792701803.4338427,
+    "ast_hash": "6cb44f823ac38dbbabdf040e5a215898",
+    "semantic_hash": "6cb44f823ac38dbbabdf040e5a215898"
+  },
+  "CHANGELOG.md": {
+    "mtime": 1792701921.2762747,
+    "ast_hash": "c0b9d67bdf9201cc16fe12270c7121f6",
+    "semantic_hash": "c0b9d67bdf9201cc16fe12270c7121f6"
+  },
+  "docs/architecture.md": {
+    "mtime": 1792702062.750612,
+    "ast_hash": "f51926ed885a9ee332d064e50e203a27",
+    "semantic_hash": "f51926ed885a9ee332d064e50e203a27"
+  },
+  "docs/releasing.md": {
+    "mtime": 1792701956.0294359,
+    "ast_hash": "2a26aff63ac8f85f28ee81da6d41ba64",
+    "semantic_hash": "2a26aff63ac8f85f28ee81da6d41ba64"
+  },
+  "infra/toolbelt.yaml": {
+    "mtime": 1792701803.4287946,
+    "ast_hash": "d50b299cdef5671afde425eb0f9b1dd5",
+    "semantic_hash": "d50b299cdef5671afde425eb0f9b1dd5"
+  },
+  "site/assets/fonts/OFL.txt": {
+    "mtime": 1792702200.1133184,
+    "ast_hash": "f77a6739188f623654c0a7ad6c11f82b",
+    "semantic_hash": "f77a6739188f623654c0a7ad6c11f82b"
+  },
+  "site/index.html": {
+    "mtime": 1792702251.5818367,
+    "ast_hash": "dd68d36da18efdb74e9b8d911ba35476",
+    "semantic_hash": "dd68d36da18efdb74e9b8d911ba35476"
   }
 }
