@@ -1,9 +1,9 @@
 # Changelog
 
-## 0.3.0
+## 0.2.1
 
 - O Toolbelt fala inglês: segue o idioma do Mac, com a opção de escolher Português ou English nas Configurações.
-- Editor "O que fica na barra": arraste ícones entre a barra e o cinto, ou use o clique direito.
+- Editor "O que fica na barra" em Configurações: um clique leva o ícone da barra para o cinto (ou de volta) e arrastar muda a ordem.
 - Relatórios de falha: quando o app fecha ou trava, ele pergunta se pode mandar o relatório técnico ao desenvolvedor (Enviar, Sempre enviar ou Agora não).
 - "Relatar um problema" e "Enviar uma sugestão" no menu do cinto e em Configurações → Ajuda e relatórios, com prévia exata do que é enviado.
 - Testado a cada mudança no macOS 14, 15 e 26.

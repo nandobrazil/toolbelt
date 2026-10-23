@@ -24,7 +24,7 @@
   <img alt="macOS 14 or later" src="https://img.shields.io/badge/macOS-14%2B-111?logo=apple&logoColor=white">
   <img alt="Apple Silicon and Intel" src="https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-universal-111">
   <img alt="Notarized by Apple" src="https://img.shields.io/badge/notarized-Developer%20ID-2ea44f">
-  <img alt="Version 0.2.0" src="https://img.shields.io/badge/version-0.2.0-C98446">
+  <img alt="Version 0.2.1" src="https://img.shields.io/badge/version-0.2.1-C98446">
 </p>
 
 ---

@@ -23,6 +23,13 @@ Onde cada coisa fica:
 4. **Chave do Radar** no Keychain, item **"Toolbelt Radar key"** (conta `toolbelt`): é a chave `rk_…` do projeto Toolbelt em https://radar.oconde.dev, que o `release.sh` embute no app (ambiente `production`) e o `install.sh` embute nos builds locais (ambiente `development`). Sem ela o `release.sh` recusa. Nova chave: Radar → projeto Toolbelt → Configurações → Chaves, e `security add-generic-password -U -a toolbelt -s "Toolbelt Radar key" -w` (pede a chave sem ecoar).
 5. **Backup do certificado:** `Toolbelt - Developer ID Application (Fernando Conde) - backup.p12` no Google Drive; a senha está no Keychain, item "Toolbelt Developer ID .p12 (Google Drive)". Para restaurar noutro Mac: abrir o `.p12` com essa senha.
 
+## Regra de versão e tags
+
+- O número vive só no arquivo `VERSION` (semver `MAIOR.MENOR.CORREÇÃO`). A tag `v<versão>` **nunca é criada à mão**: o pipeline cria quando publica, no commit que passou na matriz.
+- **CORREÇÃO** (0.2.0 → 0.2.1): ajustes e correções, ou um lote pequeno. **MENOR** (0.2 → 0.3): recurso novo grande ou mudança de comportamento. **MAIOR** (1.0): quando o app sair da fase inicial.
+- O número sempre sobe e nunca é reaproveitado: o app compara versões e ignora uma "menor" que a instalada, e cada versão publicada fica no `toolbelt-releases`.
+- Cada versão tem a sua seção `## <versão>` no `CHANGELOG.md`; cada linha `- ` vira nota da release e a primeira aparece na notificação de atualização.
+
 ## Automático: push na main
 
 O workflow `compatibility.yml` ("Compatibilidade e release") roda a cada push na `main` que mexa no app. Primeiro a matriz macOS 14/15/26 (build, testes, app aberto por 20 s); se ela passar e o `VERSION` ainda não tiver tag `v<versão>` (e o `CHANGELOG.md` tiver a seção `## <versão>`), o job **Release** num runner `macos-26`:
