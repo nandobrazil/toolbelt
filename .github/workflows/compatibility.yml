@@ -77,10 +77,12 @@ jobs:
 
       - name: Tem versão nova?
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "v$VERSION já está publicada: nada a fazer"
             echo "publish=false" >> "$GITHUB_OUTPUT"
           elif ! grep -q "^## $VERSION" CHANGELOG.md; then
@@ -129,10 +131,10 @@ jobs:
           TOOLBELT_NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
         run: scripts/release.sh
 
-      - name: Publicar no toolbelt-releases e criar a tag
+      - name: Criar a tag e publicar a release
         if: steps.version.outputs.publish == 'true'
         env:
-          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

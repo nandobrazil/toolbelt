@@ -40,7 +40,7 @@ Versão 0.2.0 preparada para distribuição: ícone do app, bundle com versão/b
 - ⌘⇥ no alternador: o macOS pega ⌘⇥/⌘⇧⇥/⌘` antes do app (symbolic hotkeys 1, 2 e 27, conferidos com `CGSGetSymbolicHotKeyValue`). `NativeWindowSwitching` desliga só o que algum atalho do Toolbelt usa (e tudo durante a gravação de atalho), como o AltTab, e religa ao sair (willTerminate + SIGTERM/INT/HUP/QUIT) e ao iniciar. Se o app travar, o ⌘⇥ do macOS só volta quando o Toolbelt abrir de novo.
 - Miniaturas: ScreenCaptureKit, prints estáticos; cache de 24 imagens (~6 MB) só com a opção ligada.
 - Barra limpa: o usuário escolhe o que aparece ao lado do cinto (`InlineInfo`); ícones próprios são opcionais; o conteúdo também aparece no painel do cinto.
-- Distribuição fora da App Store (sandbox impede Acessibilidade e as APIs privadas): Developer ID + notarização + hardened runtime. Binários como assets em `toolbelt-releases` (público); o app consulta `toolbelt.oconde.dev/updates/latest.json`, que o nginx redireciona para `releases/latest/download/latest.json`, então dá para mudar onde ficam os arquivos sem lançar versão.
+- Distribuição fora da App Store (sandbox impede Acessibilidade e as APIs privadas): Developer ID + notarização + hardened runtime. Binários como assets das releases do repositório principal (até a 0.2.3 ficavam em `toolbelt-releases`, hoje arquivado; as quatro versões foram copiadas para cá em 23/10/2026); o app consulta `toolbelt.oconde.dev/updates/latest.json`, que o nginx redireciona para `releases/latest/download/latest.json`, então dá para mudar onde ficam os arquivos sem lançar versão.
 - Atualizador próprio em vez do Sparkle: menos memória, UI no painel e nas Configurações, e a segurança vem do SHA-256 do manifesto mais a exigência de assinatura Apple do mesmo Team ID e bundle id. Build local (sem Team ID) só abre a página de download.
 - Reabrir depois de atualizar via `NSWorkspace.openApplication` com `createsNewApplicationInstance` e `--relaunch-after <pid>`: um processo filho morreria junto com o job do launchd.
 - Log: o app redireciona o stderr para `~/Library/Logs/Toolbelt.log` (sem LaunchAgent não há `StandardErrorPath`).
@@ -48,9 +48,8 @@ Versão 0.2.0 preparada para distribuição: ícone do app, bundle com versão/b
 
 ## Pendências e ideias
 
-- 0.2.0 publicada em 22/10/2026 (notarizada, DMG e zip em `toolbelt-releases`). Próxima: 0.3.0 com inglês, editor da barra e relatórios, depois de o dono confirmar o arrasto do editor.
-- Testar a atualização no lugar de verdade: a próxima release (0.2.2) deve atualizar sozinha a 0.2.1 do Homebrew em `/Applications`.
-- Depois da primeira release, testar a troca de versão de verdade (0.2.0 → 0.2.1) pelo botão Atualizar.
+- Atualização no lugar conferida: a 0.2.1 do Homebrew em `/Applications` virou 0.2.2 sozinha, sem perder a Acessibilidade.
+- Homebrew oficial (homebrew-cask): a auditoria de cask novo só recusa pela notabilidade do repositório da URL de download (precisa de 75 estrelas, 30 forks ou 30 watchers). Por isso as releases vieram para o repositório principal; o PR fica para quando ele chegar lá.
 
 - Investigar por que `panelShowsClaude`/`panelShowsSystem` apareceram `false` sem ação do usuário (foram religados). Se repetir, pode ser bug ao salvar.
 - Contas do Codex (adiado pelo dono em 22/10/2026), igual às do Claude: uma pasta por conta via `CODEX_HOME` (login em `auth.json`), compartilhando `config.toml`, `AGENTS.md`, skills, rules, prompts, `sessions/` e `history.jsonl`. O uso não fica em disco no Codex 0.163: ler pelo `codex app-server` (experimental), método `account/rateLimits/read` (`planType`, `primary`/`secondary` com `usedPercent`, `windowDurationMins`, `resetsAt`), ao abrir o painel, quando o histórico da conta muda e no reset. Testar antes de compartilhar os SQLite de estado entre contas. App desktop do Codex e app do ChatGPT ficam fora (o refresh token gira e uma cópia velha do `auth.json` derruba a sessão).

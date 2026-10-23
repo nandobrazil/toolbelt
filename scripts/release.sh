@@ -6,7 +6,7 @@ cd "$project_dir"
 
 version="$(tr -d '[:space:]' < VERSION)"
 notary_profile="${TOOLBELT_NOTARY_PROFILE:-toolbelt-notary}"
-releases_repo="${TOOLBELT_RELEASES_REPO:-nandobrazil/toolbelt-releases}"
+releases_repo="${TOOLBELT_RELEASES_REPO:-nandobrazil/toolbelt}"
 download_base_url="${TOOLBELT_DOWNLOAD_BASE_URL:-https://github.com/${releases_repo}/releases/download/v${version}}"
 site_url="${TOOLBELT_SITE_URL:-https://toolbelt.oconde.dev/}"
 build_memory_limit_mb="${TOOLBELT_BUILD_MEMORY_MB:-4096}"

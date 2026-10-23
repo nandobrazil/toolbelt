@@ -5,7 +5,7 @@ project_dir="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$project_dir"
 
 version="$(tr -d '[:space:]' < VERSION)"
-releases_repo="${TOOLBELT_RELEASES_REPO:-nandobrazil/toolbelt-releases}"
+releases_repo="${TOOLBELT_RELEASES_REPO:-nandobrazil/toolbelt}"
 site_url="${TOOLBELT_SITE_URL:-https://toolbelt.oconde.dev/}"
 disk_image="dist/Toolbelt-$version.dmg"
 archive="dist/Toolbelt-$version.zip"
@@ -28,17 +28,18 @@ awk -v version="$version" '
   inside { print }
 ' CHANGELOG.md > "$work_dir/notes.md"
 
-gh release create "v$version" \
-  --repo "$releases_repo" \
-  --title "Toolbelt $version" \
-  --notes-file "$work_dir/notes.md" \
-  --latest \
-  "$disk_image" "$archive" "$work_dir/Toolbelt.dmg" "$manifest"
-
 if ! git rev-parse "v$version" >/dev/null 2>&1; then
   git tag -a "v$version" -m "Toolbelt $version"
 fi
 git push origin "v$version"
+
+gh release create "v$version" \
+  --repo "$releases_repo" \
+  --verify-tag \
+  --title "Toolbelt $version" \
+  --notes-file "$work_dir/notes.md" \
+  --latest \
+  "$disk_image" "$archive" "$work_dir/Toolbelt.dmg" "$manifest"
 
 published="$(curl -fsSL "${site_url%/}/updates/latest.json" | plutil -extract version raw -o - -)"
 echo "feed now announces $published"

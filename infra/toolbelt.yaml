@@ -7,7 +7,7 @@ metadata:
     oconde.dev/description: "Landing page do Toolbelt, app de barra de menus para macOS"
     oconde.dev/category: app
     oconde.dev/repo: "github.com/nandobrazil/toolbelt"
-    oconde.dev/note: "produção: site estático sem banco, imagem ghcr.io/nandobrazil/toolbelt-site por commit, deploy no push da main (site/, infra/, Dockerfile) e rollback pelo workflow Redeploy da landing. /download e /updates/latest.json redirecionam para os assets de github.com/nandobrazil/toolbelt-releases e são lidos pelos apps instalados. Pull secret ghcr-pull copiado de links."
+    oconde.dev/note: "produção: site estático sem banco, imagem ghcr.io/nandobrazil/toolbelt-site por commit, deploy no push da main (site/, infra/, Dockerfile) e rollback pelo workflow Redeploy da landing. /download e /updates/latest.json redirecionam para os assets das releases de github.com/nandobrazil/toolbelt e são lidos pelos apps instalados. Pull secret ghcr-pull copiado de links."
 ---
 apiVersion: v1
 kind: LimitRange

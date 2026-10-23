@@ -38,10 +38,10 @@ check /updates/latest.json 302
 check /changelog 302
 
 LOCATION=$(curl -sS -o /dev/null -D - --max-time 20 "$BASE/updates/latest.json" | tr -d '\r' | sed -n 's/^[Ll]ocation: //p')
-if [ "$LOCATION" = "https://github.com/nandobrazil/toolbelt-releases/releases/latest/download/latest.json" ]; then
+if [ "$LOCATION" = "https://github.com/nandobrazil/toolbelt/releases/latest/download/latest.json" ]; then
   echo "  feed de atualização -> $LOCATION"
 else
-  echo "  feed de atualização -> ${LOCATION:-sem location} (esperado o latest.json do toolbelt-releases)"
+  echo "  feed de atualização -> ${LOCATION:-sem location} (esperado o latest.json das releases do toolbelt)"
   fail=1
 fi
 exit $fail

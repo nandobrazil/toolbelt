@@ -7,7 +7,7 @@ Onde cada coisa fica:
 | O quê | Onde |
 |---|---|
 | Landing | `site/`, servida em https://toolbelt.oconde.dev pelo VPS de produção (namespace `toolbelt`, prioridade `production`, só aceita tráfego da Cloudflare). Push em `main` mexendo na landing gera `ghcr.io/nandobrazil/toolbelt-site:<sha7>` no GitHub Actions e o runner `oconde-vps-toolbelt` publica com `infra/deploy.sh` + `infra/smoke.sh`; rollback: Actions → Redeploy da landing com o sha bom |
-| DMG, zip de atualização e `latest.json` | assets da release em https://github.com/nandobrazil/toolbelt-releases (público) |
+| DMG, zip de atualização e `latest.json` | assets da release em https://github.com/nandobrazil/toolbelt/releases (até a 0.2.3 também em `nandobrazil/toolbelt-releases`, hoje arquivado) |
 | `/download` e `/updates/latest.json` | redirecionamentos do nginx da landing para `releases/latest/download/...` |
 | Endereço que o app consulta | `ToolbeltUpdateFeedURL` no `Info.plist` = https://toolbelt.oconde.dev/updates/latest.json |
 
@@ -19,25 +19,24 @@ Onde cada coisa fica:
    xcrun notarytool store-credentials toolbelt-notary --apple-id <email da conta> --team-id <TEAMID>
    ```
    (pede a senha de app de forma interativa; nada vai para o repositório).
-3. **Repositório público das releases** (só na primeira vez): `gh repo create nandobrazil/toolbelt-releases --public --description "Downloads do Toolbelt"`.
-4. **Chave do Radar** no Keychain, item **"Toolbelt Radar key"** (conta `toolbelt`): é a chave `rk_…` do projeto Toolbelt em https://radar.oconde.dev, que o `release.sh` embute no app (ambiente `production`) e o `install.sh` embute nos builds locais (ambiente `development`). Sem ela o `release.sh` recusa. Nova chave: Radar → projeto Toolbelt → Configurações → Chaves, e `security add-generic-password -U -a toolbelt -s "Toolbelt Radar key" -w` (pede a chave sem ecoar).
-5. **Backup do certificado:** exporte o Developer ID como `.p12` com senha forte e guarde fora do repositório, com a senha num gerenciador de senhas. É o mesmo `.p12` do segredo `DEVELOPER_ID_P12` do CI.
+3. **Chave do Radar** no Keychain, item **"Toolbelt Radar key"** (conta `toolbelt`): é a chave `rk_…` do projeto Toolbelt em https://radar.oconde.dev, que o `release.sh` embute no app (ambiente `production`) e o `install.sh` embute nos builds locais (ambiente `development`). Sem ela o `release.sh` recusa. Nova chave: Radar → projeto Toolbelt → Configurações → Chaves, e `security add-generic-password -U -a toolbelt -s "Toolbelt Radar key" -w` (pede a chave sem ecoar).
+4. **Backup do certificado:** exporte o Developer ID como `.p12` com senha forte e guarde fora do repositório, com a senha num gerenciador de senhas. É o mesmo `.p12` do segredo `DEVELOPER_ID_P12` do CI.
 
 ## Regra de versão e tags
 
 - O número vive só no arquivo `VERSION` (semver `MAIOR.MENOR.CORREÇÃO`). A tag `v<versão>` **nunca é criada à mão**: o pipeline cria quando publica, no commit que passou na matriz.
 - **CORREÇÃO** (0.2.0 → 0.2.1): ajustes e correções, ou um lote pequeno. **MENOR** (0.2 → 0.3): recurso novo grande ou mudança de comportamento. **MAIOR** (1.0): quando o app sair da fase inicial.
-- O número sempre sobe e nunca é reaproveitado: o app compara versões e ignora uma "menor" que a instalada, e cada versão publicada fica no `toolbelt-releases`.
+- O número sempre sobe e nunca é reaproveitado: o app compara versões e ignora uma "menor" que a instalada, e cada versão publicada fica nas releases do repositório.
 - Cada versão tem a sua seção `## <versão>` no `CHANGELOG.md`; cada linha `- ` vira nota da release e a primeira aparece na notificação de atualização.
 
 ## Automático: push na main
 
-O workflow `compatibility.yml` ("Compatibilidade e release") roda a cada push na `main` que mexa no app. Primeiro a matriz macOS 14/15/26 (build, testes, app aberto por 20 s); se ela passar e o `VERSION` ainda não tiver tag `v<versão>` (e o `CHANGELOG.md` tiver a seção `## <versão>`), o job **Release** num runner `macos-26`:
+O workflow `compatibility.yml` ("Compatibilidade e release") roda a cada push na `main` que mexa no app. Primeiro a matriz macOS 14/15/26 (build, testes, app aberto por 20 s); se ela passar e o `VERSION` ainda não tiver release `v<versão>` (e o `CHANGELOG.md` tiver a seção `## <versão>`), o job **Release** num runner `macos-26`:
 
 1. importa o Developer ID num keychain temporário (segredos `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`);
 2. roda `scripts/release.sh` (build universal, assinatura, notarização com `NOTARY_APPLE_ID`/`NOTARY_TEAM_ID`/`NOTARY_PASSWORD`, DMG, zip, `latest.json`, chave `RADAR_KEY` embutida);
-3. roda `scripts/publish-release.sh` com `RELEASES_TOKEN` (token fino só com Contents: read/write em `toolbelt-releases`): release pública, tag `v<versão>` no código e conferência do feed;
-4. atualiza `version` e `sha256` do cask em https://github.com/nandobrazil/homebrew-tap (`brew install --cask nandobrazil/tap/toolbelt`), com o mesmo `RELEASES_TOKEN` (o token precisa de Contents: read/write também no `homebrew-tap`);
+3. roda `scripts/publish-release.sh` com o `GITHUB_TOKEN` do próprio job (`contents: write`): cria e envia a tag `v<versão>`, publica a release no repositório e confere o feed;
+4. atualiza `version` e `sha256` do cask em https://github.com/nandobrazil/homebrew-tap (`brew install --cask nandobrazil/tap/toolbelt`) com `RELEASES_TOKEN` (token fino com Contents: read/write no `homebrew-tap`; um passo no início de todo run confere que ele ainda escreve lá);
 5. manda `release.published` ao Radar (marca a versão nova no projeto Toolbelt);
 6. apaga o keychain temporário.
 
@@ -50,7 +49,7 @@ Para lançar: subir o `VERSION`, escrever a seção no `CHANGELOG.md`, commit e 
 1. Suba `VERSION` (semver) e escreva a seção `## <versão>` no `CHANGELOG.md`; cada linha `- ` vira uma nota no aviso de atualização.
 2. Commit.
 3. `scripts/release.sh`: build universal (arm64 + x86_64, `memcap` de 4 GB), monta o bundle, assina com hardened runtime e timestamp, notariza e grampeia o app, gera o DMG (também assinado, notarizado e grampeado), o zip de atualização e o `dist/latest.json` com SHA-256.
-4. `scripts/publish-release.sh`: cria a release `v<versão>` em `toolbelt-releases` com o DMG versionado, `Toolbelt.dmg` (nome fixo do `/download`), o zip e o `latest.json`; cria e envia a tag `v<versão>`; confere que o feed já anuncia a versão nova.
+4. `scripts/publish-release.sh`: cria e envia a tag `v<versão>`, publica a release com o DMG versionado, `Toolbelt.dmg` (nome fixo do `/download`), o zip e o `latest.json`, e confere que o feed já anuncia a versão nova.
 
 Variáveis opcionais: `TOOLBELT_RELEASE_IDENTITY`, `TOOLBELT_NOTARY_PROFILE` (padrão `toolbelt-notary`), `TOOLBELT_RELEASES_REPO`, `TOOLBELT_DOWNLOAD_BASE_URL`, `TOOLBELT_SITE_URL`, `TOOLBELT_BUILD_MEMORY_MB`.
 
