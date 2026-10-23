@@ -68,7 +68,7 @@ enum MenuBarItemMover {
             return .failed(String(localized: "Não achei o lugar de destino na barra. A lista foi atualizada; tente de novo."))
         }
         let isRightOfSource = destination.edge > source.frame.minX
-        if isRightOfSource && abs(destination.edge - source.frame.maxX) <= adjacencyTolerance {
+        if isRightOfSource && itemsBetween(source, and: destination.edge, in: extras).isEmpty {
             return .unchanged
         }
 
@@ -134,11 +134,22 @@ enum MenuBarItemMover {
         } else {
             expectedEdge = nil
         }
-        if let expectedEdge, abs(expectedEdge - moved.frame.maxX) > adjacencyTolerance {
-            NSLog("Toolbelt: menu bar item \(source.title) ended at \(Int(moved.frame.maxX)), expected \(Int(expectedEdge))")
-            return .failed(String(localized: "\(source.title) se mexeu, mas não ficou exatamente onde você soltou. Arraste de novo."))
+        if let expectedEdge {
+            let crowding = itemsBetween(moved, and: expectedEdge, in: extras)
+            if moved.frame.maxX > expectedEdge + adjacencyTolerance || !crowding.isEmpty {
+                NSLog("Toolbelt: menu bar item \(source.title) ended at \(Int(moved.frame.minX))-\(Int(moved.frame.maxX)), expected before \(Int(expectedEdge)), \(crowding.count) item(s) in between")
+                return .failed(String(localized: "\(source.title) se mexeu, mas não ficou exatamente onde você soltou. Arraste de novo."))
+            }
         }
         return .moved(source.title)
+    }
+
+    private static func itemsBetween(_ item: MenuBarExtra, and edge: CGFloat, in extras: [MenuBarExtra]) -> [MenuBarExtra] {
+        let lower = min(item.frame.midX, edge)
+        let upper = max(item.frame.midX, edge)
+        return extras.filter { other in
+            !CFEqual(other.element, item.element) && other.frame.midX > lower && other.frame.midX < upper
+        }
     }
 
     private static func isOnMenuBar(_ frame: CGRect, of screen: NSScreen) -> Bool {
