@@ -15,7 +15,7 @@
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../assets/app-icon.png">
 <link rel="preload" href="../assets/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/site.css?v=20261023">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="pt_BR">
@@ -28,7 +28,8 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Mac menu bar with the Toolbelt icon and its panel open.">
 <meta name="twitter:card" content="summary_large_image">
-<script src="../assets/site.js" defer></script>
+<script>document.documentElement.classList.add("js")</script>
+<script src="../assets/site.js?v=20261023" defer></script>
 </head>
 <body>
 <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
@@ -64,6 +65,14 @@
   <symbol id="glyph-bell" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M4 11V7.4a4 4 0 0 1 8 0V11l1.2 1.4H2.8Z"/><path d="M6.6 14a1.4 1.4 0 0 0 2.8 0"/></g></symbol>
   <symbol id="glyph-globe" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6.2"/><ellipse cx="8" cy="8" rx="2.6" ry="6.2"/><path d="M1.8 8h12.4"/></g></symbol>
   <symbol id="glyph-headphones" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2.5 10.5V8a5.5 5.5 0 0 1 11 0v2.5"/><rect x="2" y="9.5" width="3" height="4.5" rx="1"/><rect x="11" y="9.5" width="3" height="4.5" rx="1"/></g></symbol>
+  <symbol id="sf-gear" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"><path d="M6.9 1.6h2.2l.4 1.8 1.3.6 1.6-1 1.5 1.6-1 1.5.6 1.4 1.8.4v2.2l-1.8.4-.6 1.3 1 1.6-1.5 1.5-1.6-1-1.3.6-.4 1.8H6.9l-.4-1.8-1.4-.6-1.5 1-1.6-1.5 1-1.6-.6-1.3-1.8-.4V6.9l1.8-.4.6-1.4-1-1.5 1.6-1.6 1.5 1 1.4-.6Z"/><circle cx="8" cy="8" r="2.2"/></g></symbol>
+  <symbol id="sf-menubar" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M1.5 5.6h13"/><path d="M8 11.6V8.2M6.4 9.6 8 8l1.6 1.6"/></g></symbol>
+  <symbol id="sf-switcher" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"><rect x="1.5" y="5" width="9.5" height="8" rx="1.6"/><path d="M5 5V3.7c0-.9.7-1.6 1.6-1.6h6.3c.9 0 1.6.7 1.6 1.6V9c0 .9-.7 1.6-1.6 1.6H11"/></g></symbol>
+  <symbol id="sf-gauge" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><path d="M2.4 11.5a5.6 5.6 0 1 1 11.2 0"/><path d="M8 11.2l2.7-3.5"/></g><circle cx="8" cy="11.2" r="1.1" fill="currentColor"/></symbol>
+  <symbol id="sf-sparkle" viewBox="0 0 16 16"><path d="M8 1.6c.55 3.3 2 4.85 5.3 5.4-3.3.55-4.75 2.1-5.3 5.4-.55-3.3-2-4.85-5.3-5.4 3.3-.55 4.75-2.1 5.3-5.4Z" fill="currentColor"/></symbol>
+  <symbol id="sf-lifebuoy" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><circle cx="8" cy="8" r="6.2"/><circle cx="8" cy="8" r="2.6"/><path d="M3.6 3.6l2.6 2.6M12.4 3.6 9.8 6.2M3.6 12.4l2.6-2.6M12.4 12.4 9.8 9.8"/></g></symbol>
+  <symbol id="sf-info" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><circle cx="8" cy="8" r="6.2"/><path d="M8 7.3v4"/></g><circle cx="8" cy="4.9" r=".85" fill="currentColor"/></symbol>
+  <symbol id="github-mark" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></symbol>
   <symbol id="glyph-chevron" viewBox="0 0 16 16"><path d="M6 3.5L10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
@@ -92,7 +101,7 @@
     <div class="hero__copy" id="content">
       <h1 class="hero__title" id="hero-title">Six menu bar apps, now just one.</h1>
       <p class="hero__lead">Toolbelt tucks away the icons that don't fit beside the notch, switches between windows, keeps what you copy, snaps windows from the keyboard, warns you when memory and disk run tight, and switches Claude Code accounts. All in a single process of about 15 MB.</p>
-      <p class="hero__replaces">It takes the place of Ice or Bartender, AltTab, Flycut, Rectangle, a RAM and disk monitor, and the back-and-forth between Claude Code accounts.</p>
+      <p class="hero__replaces">One app instead of a menu bar organizer, a window switcher, a clipboard history, a window manager, a RAM and disk monitor, and the back-and-forth between Claude Code accounts.</p>
       <div class="hero__actions">
         <a class="button button--primary" href="/download">Download for macOS</a>
         <a class="button button--quiet" href="#features">See features</a>
@@ -101,13 +110,15 @@
         <li>macOS 14 or later</li>
         <li>Apple Silicon and Intel</li>
         <li>Notarized by Apple</li>
+        <li><a href="https://github.com/nandobrazil/toolbelt">Open source, GPL-3.0</a></li>
       </ul>
     </div>
 
     <div class="hero__stage">
-      <div class="mac-panel" id="hero-panel" role="img" aria-label="Toolbelt panel open below the belt: hidden menu bar icons, Claude accounts with each one's usage, and the Mac's memory and disk.">
+      <img class="shot hero__shot" src="../assets/shots/en/belt-panel.webp" width="334" height="367" alt="Toolbelt panel open: hidden menu bar icons, Claude accounts with each one's usage, memory and disk, and the footer shortcuts." loading="lazy" decoding="async">
+      <div class="mac-panel" id="hero-panel" role="group" aria-label="Toolbelt panel open below the belt: hidden menu bar icons, Claude accounts with each one's usage, and the Mac's memory and disk.">
         <p class="mac-panel__label">Hidden icons</p>
-        <div class="mac-panel__extras">
+        <div class="mac-panel__extras" aria-hidden="true">
           <span><svg><use href="#glyph-cloud"/></svg></span>
           <span><svg><use href="#glyph-music"/></svg></span>
           <span><svg><use href="#glyph-shield"/></svg></span>
@@ -148,12 +159,12 @@
         <p class="panel-report"><svg><use href="#glyph-report"/></svg>Full Mac report…</p>
         <div class="mac-panel__divider"></div>
         <div class="mac-panel__footer">
-          <span><svg><use href="#glyph-clipboard"/></svg></span>
-          <span><svg><use href="#glyph-arrange"/></svg></span>
-          <span><svg><use href="#glyph-split"/></svg></span>
+          <span aria-hidden="true"><svg><use href="#glyph-clipboard"/></svg></span>
+          <span aria-hidden="true"><svg><use href="#glyph-arrange"/></svg></span>
+          <span aria-hidden="true"><svg><use href="#glyph-split"/></svg></span>
           <span class="mac-panel__spacer"></span>
-          <span><svg><use href="#glyph-gear"/></svg></span>
-          <span><svg><use href="#glyph-power"/></svg></span>
+          <button class="mac-panel__button" type="button" data-settings-page="general" aria-label="Open Settings"><svg aria-hidden="true"><use href="#glyph-gear"/></svg></button>
+          <span aria-hidden="true"><svg><use href="#glyph-power"/></svg></span>
         </div>
       </div>
     </div>
@@ -186,47 +197,32 @@
           <li><span class="feature__key">Next to the belt</span> you can show the active Claude account, the 5-hour usage, RAM, swap or free disk space, all in a single item.</li>
         </ul>
       </div>
-      <figure class="feature__art">
-        <div class="arrange-bar" role="img" aria-label="Two menu bars. The first is in arrange mode: icons to the left of the divider go to the panel. The second shows the bar afterwards: only the belt, Wi-Fi and the clock to the right of the notch.">
-          <p class="arrange-bar__caption">Arrange mode</p>
-          <div class="arrange-bar__strip">
-            <span class="arrange-bar__menus"><b>Finder</b><span>File</span><span>Edit</span></span>
-            <span class="arrange-bar__notch"></span>
-            <span class="arrange-bar__hidden">
-              <svg><use href="#glyph-cloud"/></svg>
-              <svg><use href="#glyph-music"/></svg>
-              <svg><use href="#glyph-shield"/></svg>
-              <svg><use href="#glyph-timer"/></svg>
-            </span>
-            <span class="arrange-bar__divider">┊</span>
-            <span class="arrange-bar__visible">
-              <svg><use href="#belt-closed"/></svg>
-              <svg><use href="#glyph-wifi"/></svg>
-              <span>5:16 PM</span>
-            </span>
-          </div>
-          <p class="arrange-bar__caption">After</p>
-          <div class="arrange-bar__strip">
-            <span class="arrange-bar__menus"><b>Finder</b><span>File</span><span>Edit</span></span>
-            <span class="arrange-bar__notch"></span>
-            <span class="arrange-bar__visible arrange-bar__visible--after">
-              <svg><use href="#belt-closed"/></svg>
-              <svg><use href="#glyph-wifi"/></svg>
-              <span>5:16 PM</span>
-            </span>
+      <figure class="feature__art feature__art--shot">
+        <div class="shot-stage">
+          <div class="shot-window">
+            <div class="shot-window__bar" aria-hidden="true"><span class="shot-window__lights"><span></span><span></span><span></span></span><span class="shot-window__title">Menu bar</span></div>
+            <img class="shot-window__page" src="../assets/shots/en/settings-menuBar.webp" width="580" height="1428" alt="Toolbelt Settings on the Menu bar page: the What stays in the menu bar section, with the icons kept in the menu bar (Weather, Now Playing, Bluetooth, Wi‑Fi, Battery, Control Center and Clock) and the ones hidden in the belt." loading="lazy" decoding="async">
           </div>
         </div>
-        <figcaption>Arrange mode: whatever sits to the left of the divider moves into the belt's panel.</figcaption>
+        <figcaption class="how">
+          <p class="how__title">How it works</p>
+          <ol class="how__steps">
+            <li>Click the belt to see every hidden icon in one panel.</li>
+            <li>In Settings › Menu bar, click an icon to send it from the menu bar to the belt, or back.</li>
+            <li>Drag to change the order: Toolbelt actually moves the icon in the menu bar and checks that it got there.</li>
+          </ol>
+          <p class="feature__more"><button class="text-button" type="button" data-settings-page="menuBar">Open Settings<svg aria-hidden="true"><use href="#glyph-chevron"/></svg></button></p>
+        </figcaption>
       </figure>
     </div>
   </section>
 
   <section class="feature" id="window-switcher" aria-labelledby="switcher-title">
-    <div class="container feature__grid">
+    <div class="container feature__grid feature__grid--stacked">
       <div class="feature__copy">
         <h2 class="section-title" id="switcher-title">Switch between windows, not apps</h2>
         <p>Hold <kbd>⌥</kbd> and press <kbd>⇥</kbd>: every open window from every app shows up. Let go to switch. A quick tap jumps straight back to the previous window, and <kbd>⇧</kbd> goes backwards.</p>
-        <p>Prefer <kbd>⌘</kbd><kbd>⇥</kbd>, like in AltTab? Record that shortcut and Toolbelt takes over from the macOS switcher while it's running.</p>
+        <p>Prefer <kbd>⌘</kbd><kbd>⇥</kbd>? Record that shortcut and Toolbelt takes over from the macOS switcher while it's running.</p>
         <ul class="feature__points">
           <li><span class="feature__key"><kbd>⌥</kbd><kbd>`</kbd></span> shows only the current app's windows.</li>
           <li><span class="feature__key">With the panel open</span> <kbd>W</kbd> closes the window, <kbd>M</kbd> minimizes it, <kbd>H</kbd> hides the app and <kbd>Q</kbd> quits it.</li>
@@ -234,21 +230,19 @@
           <li><span class="feature__key">Window thumbnails</span>, if you want them. They're kept in memory only, 24 at most.</li>
         </ul>
       </div>
-      <figure class="feature__art">
-        <div class="screen" role="img" aria-label="Window switcher open in the middle of the screen, with five windows from different apps and the second one selected.">
-          <span class="screen__window screen__window--back"></span>
-          <span class="screen__window screen__window--front"></span>
-          <div class="switcher">
-            <div class="switcher__tiles">
-              <span class="switcher__tile"><span class="app-icon app-icon--browser"><svg><use href="#glyph-globe"/></svg></span><span class="switcher__title">Docs</span></span>
-              <span class="switcher__tile switcher__tile--selected"><span class="app-icon app-icon--terminal"><svg><use href="#glyph-terminal"/></svg></span><span class="switcher__title">~/toolbelt</span></span>
-              <span class="switcher__tile"><span class="app-icon app-icon--notes"><svg><use href="#glyph-report"/></svg></span><span class="switcher__title">Ideas</span></span>
-              <span class="switcher__tile"><span class="app-icon app-icon--chat"><svg><use href="#glyph-bell"/></svg></span><span class="switcher__title">Family</span></span>
-              <span class="switcher__tile"><span class="app-icon app-icon--code"><svg><use href="#glyph-split"/></svg></span><span class="switcher__title">main.swift</span></span>
-            </div>
-            <p class="switcher__hints">W close · M minimize · H hide app · Q quit app · / search</p>
-          </div>
+      <figure class="feature__art feature__art--shot">
+        <div class="shot-stage">
+          <img class="shot" src="../assets/shots/en/window-switcher.webp" width="860" height="166" alt="Toolbelt's window switcher with six open windows (Safari, Terminal, Notes, Mail, Calendar and Finder), Terminal selected and the action keys in the footer." loading="lazy" decoding="async">
         </div>
+        <figcaption class="how">
+          <p class="how__title">How it works</p>
+          <ol class="how__steps">
+            <li>Hold <kbd>⌥</kbd> and press <kbd>⇥</kbd> (or <kbd>⌘</kbd><kbd>⇥</kbd>, if you recorded that shortcut): every app's windows show up.</li>
+            <li>Press <kbd>⇥</kbd> again to move on, <kbd>⇧</kbd><kbd>⇥</kbd> to go back, or use the mouse.</li>
+            <li>Let go to switch. Before that, <kbd>W</kbd>, <kbd>M</kbd>, <kbd>H</kbd> and <kbd>Q</kbd> act on the highlighted window.</li>
+          </ol>
+          <p class="feature__more"><button class="text-button" type="button" data-settings-page="switcher">See the shortcuts in Settings<svg aria-hidden="true"><use href="#glyph-chevron"/></svg></button></p>
+        </figcaption>
       </figure>
     </div>
   </section>
@@ -260,19 +254,24 @@
         <p><kbd>⌥</kbd><kbd>⌘</kbd><kbd>V</kbd> opens a panel with your latest text, images and screenshots. Pick one with the mouse, the arrow keys or the numbers 1 to 0, and it's pasted into the app you were using.</p>
         <ul class="feature__points">
           <li><span class="feature__key">Screenshots</span> saved with <kbd>⌘</kbd><kbd>⇧</kbd><kbd>3</kbd>, <kbd>4</kbd> or <kbd>5</kbd> land in the history on their own.</li>
-          <li><span class="feature__key">Passwords stay out</span>: anything copied from 1Password, Bitwarden or apps you choose to ignore is never stored.</li>
+          <li><span class="feature__key">Passwords stay out</span>: anything copied from password managers and the apps you choose to ignore is never stored.</li>
           <li><span class="feature__key">Daily archive</span>, if you turn it on: one .md file per day with the time and source app, and images in a subfolder.</li>
           <li><span class="feature__key">Your way</span>: theme, glass, frosted or solid, width, font, corners and where the panel opens.</li>
         </ul>
       </div>
-      <figure class="feature__art">
-        <div class="clip-panel" role="img" aria-label="Clipboard panel with five numbered items: a command, a screenshot, a note, a link and an address.">
-          <div class="clip-panel__row clip-panel__row--selected"><span class="clip-panel__number">1</span><span class="clip-panel__text clip-panel__text--code">git push origin main</span></div>
-          <div class="clip-panel__row clip-panel__row--image"><span class="clip-panel__number">2</span><span class="clip-panel__shot"><span class="clip-panel__shot-window"><span class="clip-panel__shot-dots"></span><span class="clip-panel__shot-line"></span><span class="clip-panel__shot-line clip-panel__shot-line--short"></span><span class="clip-panel__shot-mark"></span></span></span><span class="clip-panel__meta">Screenshot · 5:02 PM</span></div>
-          <div class="clip-panel__row"><span class="clip-panel__number">3</span><span class="clip-panel__text">Meeting moved to Thursday at 3 PM</span></div>
-          <div class="clip-panel__row"><span class="clip-panel__number">4</span><span class="clip-panel__text">https://toolbelt.oconde.dev</span></div>
-          <div class="clip-panel__row"><span class="clip-panel__number">5</span><span class="clip-panel__text">120 Orange Street, Apt 34</span></div>
+      <figure class="feature__art feature__art--shot">
+        <div class="shot-stage">
+          <img class="shot" src="../assets/shots/en/clipboard-picker.webp" width="420" height="252" alt="Toolbelt's clipboard history with six numbered items: a git command, a screenshot, a link, a note, a Homebrew command and an address; the first one is selected." loading="lazy" decoding="async">
         </div>
+        <figcaption class="how">
+          <p class="how__title">How it works</p>
+          <ol class="how__steps">
+            <li>Hold <kbd>⌥</kbd><kbd>⌘</kbd> and press <kbd>V</kbd> in any app.</li>
+            <li>Pick with the arrow keys, a number from 1 to 0 or the mouse. Type to filter.</li>
+            <li>The item is pasted into the app you were in, without switching windows.</li>
+          </ol>
+          <p class="feature__more"><button class="text-button" type="button" data-settings-page="clipboard">See the options in Settings<svg aria-hidden="true"><use href="#glyph-chevron"/></svg></button></p>
+        </figcaption>
       </figure>
     </div>
   </section>
@@ -281,7 +280,8 @@
     <div class="container">
       <div class="feature__copy feature__copy--wide">
         <h2 class="section-title" id="windows-title">Windows in place, hands on the keyboard</h2>
-        <p>The same <kbd>⌃</kbd><kbd>⌥</kbd> shortcuts as Rectangle, without installing Rectangle. Halves, thirds, two thirds, corners, center, full screen and moving between displays, with whatever gap between windows you like.</p>
+        <p><kbd>⌃</kbd><kbd>⌥</kbd> shortcuts that snap the front window without leaving the keyboard. Halves, thirds, two thirds, corners, center, full screen and moving between displays, with whatever gap between windows you like.</p>
+        <p class="feature__more"><button class="text-button" type="button" data-settings-page="windows">See and re-record the shortcuts in Settings<svg aria-hidden="true"><use href="#glyph-chevron"/></svg></button></p>
       </div>
       <ul class="layouts" aria-label="Window shortcuts">
         <li><span class="mini-screen"><span style="--x:.0;--y:0;--w:.5;--h:1"></span></span><span class="layouts__keys"><kbd>⌃⌥←</kbd></span><span class="layouts__name">Left half</span></li>
@@ -314,6 +314,7 @@
           <li><span class="feature__key">Your own limits</span>: by default, less than 10% free disk and more than 4 GB of swap.</li>
           <li><span class="feature__key">Mac report</span> with battery, storage, memory, CPU, processes, security and network. It only runs when you open it.</li>
         </ul>
+        <p class="feature__more"><button class="text-button" type="button" data-settings-page="system">See alerts and limits in Settings<svg aria-hidden="true"><use href="#glyph-chevron"/></svg></button></p>
       </div>
       <figure class="feature__art">
         <div class="alert-scene" role="img" aria-label="Menu bar with the monitor in orange showing 74% memory and 14.8 GB free, and a Toolbelt notification warning that the disk is almost full.">
@@ -356,6 +357,7 @@
           <li><span class="feature__key">A terminal pinned to an account</span>, with a shortcut for each one.</li>
           <li><span class="feature__key">No extra login</span>: usage is read from Claude Code's own files and updates when they change.</li>
         </ul>
+        <p class="feature__more"><button class="text-button" type="button" data-settings-page="claude">See the accounts in Settings<svg aria-hidden="true"><use href="#glyph-chevron"/></svg></button></p>
       </div>
       <figure class="feature__art">
         <div class="claude-scene" role="img" aria-label="Claude accounts menu open in the menu bar: the personal account is active with 22% used in the last 5 hours, and the work account is at 63%.">
@@ -401,24 +403,7 @@
       </div>
       <figure class="feature__art">
         <div class="update-scene" role="img" aria-label="Update section in the Toolbelt panel with the Update button, and the system notification with the Update Now button.">
-          <div class="mac-panel mac-panel--compact update-scene__panel">
-            <p class="mac-panel__label">Hidden icons</p>
-            <div class="mac-panel__extras">
-              <span><svg><use href="#glyph-cloud"/></svg></span>
-              <span><svg><use href="#glyph-music"/></svg></span>
-              <span><svg><use href="#glyph-shield"/></svg></span>
-              <span><svg><use href="#glyph-timer"/></svg></span>
-              <span><svg><use href="#glyph-display"/></svg></span>
-              <span><svg><use href="#glyph-keyboard"/></svg></span>
-            </div>
-            <div class="mac-panel__divider"></div>
-            <p class="mac-panel__label">Update</p>
-            <div class="update-banner">
-              <svg class="update-banner__icon"><use href="#glyph-download"/></svg>
-              <span class="update-banner__text"><strong>Toolbelt 0.3.0 available</strong><span>You're on 0.2.0.</span></span>
-              <span class="update-banner__action">Update</span>
-            </div>
-          </div>
+          <img class="shot update-scene__shot" src="../assets/shots/en/belt-panel-update.webp" width="410" height="279" alt="Toolbelt panel with the Update section: Toolbelt 0.3.0 available, with the Update button." loading="lazy" decoding="async">
           <div class="notification notification--update">
             <span class="notification__icon"><svg><use href="#belt-closed"/></svg></span>
             <span class="notification__text"><strong>Toolbelt 0.3.0 available</strong><span>You're on 0.2.0. Update with one click.</span></span>
@@ -476,6 +461,7 @@
       </div>
       <div class="install__footer">
         <a class="button button--primary" href="/download">Download for macOS</a>
+        <a class="button button--quiet github-link" href="https://github.com/nandobrazil/toolbelt"><svg aria-hidden="true"><use href="#github-mark"/></svg>Open source on GitHub</a>
         <p class="install__requirements">Requires macOS 14 Sonoma or later on a Mac with Apple Silicon or Intel. Claude accounts need Claude Code installed.</p>
       </div>
     </div>
@@ -490,8 +476,12 @@
           <p>It's signed with a Developer ID and notarized by Apple: macOS checks the signature before opening it and doesn't show the "can't be verified" warning. It runs only on your Mac, with no account and no telemetry.</p>
         </details>
         <details>
-          <summary>Do I need to uninstall AltTab, Ice or Rectangle?</summary>
-          <p>No need to uninstall them, but quit those apps and remove them from your login items. They use the same shortcuts and compete with Toolbelt for the menu bar. The same goes for Bartender and Flycut.</p>
+          <summary>Is it open source?</summary>
+          <p>Yes. Toolbelt's code is on <a href="https://github.com/nandobrazil/toolbelt">GitHub</a> under the GPL-3.0 license: you can read it, build it and change it. Anyone who distributes a modified version has to publish its code under the same license.</p>
+        </details>
+        <details>
+          <summary>I already use other apps for this. Do I need to uninstall them?</summary>
+          <p>No need to uninstall anything. If you already use another app to switch windows, organize the menu bar, snap windows or keep a clipboard history, quit it and remove it from your login items: the shortcuts are the same and both would compete for the menu bar.</p>
         </details>
         <details>
           <summary>Does Toolbelt use the internet?</summary>
@@ -512,14 +502,43 @@
 
 <footer class="site-footer">
   <div class="container site-footer__inner">
-    <p class="site-footer__brand"><svg aria-hidden="true"><use href="#belt-closed"/></svg>Toolbelt <span class="site-footer__version">v0.2.1</span></p>
+    <p class="site-footer__brand"><svg aria-hidden="true"><use href="#belt-closed"/></svg>Toolbelt <span class="site-footer__version">v0.2.1 · <a href="https://github.com/nandobrazil/toolbelt/blob/main/LICENSE">GPL-3.0 license</a></span></p>
     <nav class="site-footer__links" aria-label="Footer">
       <a href="/download">Download</a>
+      <a class="github-link" href="https://github.com/nandobrazil/toolbelt"><svg aria-hidden="true"><use href="#github-mark"/></svg>Open source on GitHub</a>
       <a href="/changelog">What's new</a>
       <a href="/" hreflang="pt-BR" lang="pt-BR">Português</a>
       <a href="#top">Back to top</a>
     </nav>
   </div>
 </footer>
+<dialog class="settings-dialog" id="settings-dialog" role="dialog" aria-modal="true" aria-label="Toolbelt Settings" data-shots="../assets/shots/en/" data-alt-prefix="Toolbelt Settings, page ">
+  <div class="settings-window">
+    <div class="settings-window__sidebar">
+      <div class="settings-window__lights">
+        <button class="settings-window__light settings-window__light--close" type="button" data-settings-close aria-label="Close Settings"></button>
+        <span class="settings-window__light settings-window__light--minimize" aria-hidden="true"></span>
+        <span class="settings-window__light settings-window__light--zoom" aria-hidden="true"></span>
+      </div>
+      <div class="settings-window__tabs" role="tablist" aria-orientation="vertical" aria-label="Settings sections">
+        <button class="settings-tab" type="button" role="tab" id="settings-tab-general" aria-controls="settings-page" aria-selected="true" tabindex="0" data-page="general" data-width="580" data-height="1023"><svg aria-hidden="true"><use href="#sf-gear"/></svg><span>General</span></button>
+        <button class="settings-tab" type="button" role="tab" id="settings-tab-menuBar" aria-controls="settings-page" aria-selected="false" tabindex="-1" data-page="menuBar" data-width="580" data-height="1428"><svg aria-hidden="true"><use href="#sf-menubar"/></svg><span>Menu bar</span></button>
+        <button class="settings-tab" type="button" role="tab" id="settings-tab-switcher" aria-controls="settings-page" aria-selected="false" tabindex="-1" data-page="switcher" data-width="580" data-height="611"><svg aria-hidden="true"><use href="#sf-switcher"/></svg><span>Switch windows</span></button>
+        <button class="settings-tab" type="button" role="tab" id="settings-tab-clipboard" aria-controls="settings-page" aria-selected="false" tabindex="-1" data-page="clipboard" data-width="580" data-height="1455"><svg aria-hidden="true"><use href="#glyph-clipboard"/></svg><span>Clipboard</span></button>
+        <button class="settings-tab" type="button" role="tab" id="settings-tab-windows" aria-controls="settings-page" aria-selected="false" tabindex="-1" data-page="windows" data-width="580" data-height="1020"><svg aria-hidden="true"><use href="#glyph-split"/></svg><span>Windows</span></button>
+        <button class="settings-tab" type="button" role="tab" id="settings-tab-system" aria-controls="settings-page" aria-selected="false" tabindex="-1" data-page="system" data-width="580" data-height="694"><svg aria-hidden="true"><use href="#sf-gauge"/></svg><span>System monitor</span></button>
+        <button class="settings-tab" type="button" role="tab" id="settings-tab-claude" aria-controls="settings-page" aria-selected="false" tabindex="-1" data-page="claude" data-width="580" data-height="579"><svg aria-hidden="true"><use href="#sf-sparkle"/></svg><span>Claude accounts</span></button>
+        <button class="settings-tab" type="button" role="tab" id="settings-tab-support" aria-controls="settings-page" aria-selected="false" tabindex="-1" data-page="support" data-width="580" data-height="495"><svg aria-hidden="true"><use href="#sf-lifebuoy"/></svg><span>Help & reports</span></button>
+        <button class="settings-tab" type="button" role="tab" id="settings-tab-about" aria-controls="settings-page" aria-selected="false" tabindex="-1" data-page="about" data-width="580" data-height="470"><svg aria-hidden="true"><use href="#sf-info"/></svg><span>About</span></button>
+      </div>
+    </div>
+    <div class="settings-window__main">
+      <p class="settings-window__title" aria-hidden="true">General</p>
+      <div class="settings-window__detail" id="settings-page" role="tabpanel" tabindex="0" aria-labelledby="settings-tab-general">
+        <img class="settings-window__page" alt="" width="580" height="1023" decoding="async">
+      </div>
+    </div>
+  </div>
+</dialog>
 </body>
 </html>
