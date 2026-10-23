@@ -24,7 +24,7 @@
   <img alt="macOS 14 ou mais recente" src="https://img.shields.io/badge/macOS-14%2B-111?logo=apple&logoColor=white">
   <img alt="Apple Silicon e Intel" src="https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-universal-111">
   <img alt="Notarizado pela Apple" src="https://img.shields.io/badge/notarizado-Developer%20ID-2ea44f">
-  <img alt="Versão 0.2.2" src="https://img.shields.io/badge/vers%C3%A3o-0.2.2-C98446">
+  <img alt="Versão 0.2.3" src="https://img.shields.io/badge/vers%C3%A3o-0.2.3-C98446">
   <img alt="Licença GPL-3.0" src="https://img.shields.io/badge/licen%C3%A7a-GPL--3.0-2b6cb0">
 </p>
 

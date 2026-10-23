@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3
+
+- O aviso de atualização não alarga mais o painel do cinto: a nota da versão quebra em até três linhas.
+
 ## 0.2.2
 
 - Corrigido o título de cada módulo nas Configurações ("Ativar as contas do Claude" em vez de "Ativar contas do claude").

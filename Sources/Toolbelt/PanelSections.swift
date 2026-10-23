@@ -63,7 +63,7 @@ enum PanelSections {
         switch state {
         case .available(let available):
             release = available
-            status = available.notes.first ?? String(localized: "Você está na \(AppUpdater.currentVersion).")
+            status = available.notes.first.map { shortened($0, limit: maximumNoteLength) } ?? String(localized: "Você está na \(AppUpdater.currentVersion).")
             isActionable = true
         case .downloading(let downloading):
             release = downloading
@@ -87,15 +87,20 @@ enum PanelSections {
 
         let title = NSTextField(labelWithString: String(localized: "Toolbelt \(release.version) disponível"))
         title.font = .systemFont(ofSize: 13, weight: .semibold)
-        let subtitle = NSTextField(labelWithString: status)
+        let subtitle = NSTextField(wrappingLabelWithString: status)
         subtitle.font = .systemFont(ofSize: 11)
         subtitle.textColor = .secondaryLabelColor
-        subtitle.lineBreakMode = .byTruncatingTail
+        subtitle.maximumNumberOfLines = 3
+        subtitle.cell?.truncatesLastVisibleLine = true
+        subtitle.preferredMaxLayoutWidth = updateTextWidth
+        subtitle.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         let texts = verticalStack(spacing: 1)
         texts.addArrangedSubview(title)
         texts.addArrangedSubview(subtitle)
+        texts.widthAnchor.constraint(lessThanOrEqualToConstant: updateTextWidth).isActive = true
 
         let content = NSStackView(views: [icon, texts, NSView()])
+        content.alignment = .top
         content.orientation = .horizontal
         content.spacing = 8
         if isActionable {
@@ -112,6 +117,16 @@ enum PanelSections {
         row.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         stack.widthAnchor.constraint(greaterThanOrEqualToConstant: width).isActive = true
         return stack
+    }
+
+    private static let updateTextWidth: CGFloat = 190
+    private static let maximumNoteLength = 110
+
+    private static func shortened(_ text: String, limit: Int) -> String {
+        guard text.count > limit else { return text }
+        let prefix = text.prefix(limit)
+        let cut = prefix.lastIndex(of: " ").map { prefix[..<$0] } ?? prefix
+        return cut.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)) + "…"
     }
 
     static func crash(pending: [PendingCrash], onSend: @escaping () -> Void, onAlways: @escaping () -> Void, onDismiss: @escaping () -> Void) -> NSView? {
