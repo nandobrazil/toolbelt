@@ -1,28 +1,9 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct MenuBarLayoutPanel: View {
-    @ObservedObject var bridge: SettingsBridge
-
+struct MenuBarLayoutFooter: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("O que fica na barra")
-                .font(.headline)
-            MenuBarLayoutEditor(bridge: bridge)
-            Text("Clique num ícone para mandá-lo para a outra faixa, ou arraste para mudar a ordem. O Toolbelt move o ícone de verdade com um ⌘-arrastar na barra (o cursor some por meio segundo) e confere se ele chegou. Relógio e Central de Controle são fixos no macOS; \(Image(systemName: "eye.slash")) marca o que fica atrás do notch.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.primary.opacity(0.04))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.primary.opacity(0.08))
-        )
+        Text("Clique num ícone para mandá-lo para a outra faixa, ou arraste para mudar a ordem. O Toolbelt move o ícone de verdade com um ⌘-arrastar na barra (o cursor some por meio segundo) e confere se ele chegou. Relógio e Central de Controle são fixos no macOS; \(Image(systemName: "eye.slash")) marca o que fica atrás do notch.")
     }
 }
 
