@@ -18,8 +18,9 @@ Correção sem mudança visível: só conferir se os textos da landing continuam
 1. Instale o build com a mudança: `scripts/install.sh`.
 2. Gere as imagens nas duas línguas: `scripts/landing-screenshots.sh` (renderiza a interface real fora da tela, com dados de exemplo, em `site/assets/shots/pt` e `site/assets/shots/en`). Seção nova nas Configurações entra também no modal da landing.
 3. Revise os textos em português e em inglês (`site/index.html`, `site/en/index.html`), as legendas "como funciona" e, se mudou instalação ou recurso, os READMEs (`README.md`, `README.en.md`).
-4. Confira no Chrome headless: desktop, 390 px de largura, claro e escuro, sem rolagem horizontal em 360 px.
-5. Commit e push na `main`: o workflow `deploy-site.yml` publica a landing em produção.
+4. Suba o carimbo `?v=` do CSS e do JS e o `data-shots-version` do modal (os três com o mesmo valor) sempre que mudar CSS, JS ou imagens: o nginx deixa o navegador guardar CSS e JS por 1 h e imagens por 7 dias.
+5. Confira no Chrome headless: desktop, 390 px de largura, claro e escuro, sem rolagem horizontal em 360 px.
+6. Commit e push na `main`: o workflow `deploy-site.yml` publica a landing em produção.
 
 ## Nunca
 

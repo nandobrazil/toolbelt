@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+
+- Downloads e atualizações passam a sair do repositório do Toolbelt no GitHub, junto com o código.
+- Botão "Deixe uma estrela no GitHub" na tela Sobre das Configurações.
+
 ## 0.2.3
 
 - O aviso de atualização não alarga mais o painel do cinto: a nota da versão quebra em até três linhas.

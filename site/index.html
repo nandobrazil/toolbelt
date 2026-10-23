@@ -15,7 +15,7 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/app-icon.png">
 <link rel="preload" href="assets/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=20261023">
+<link rel="stylesheet" href="assets/site.css?v=20261023b">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:locale:alternate" content="en_US">
@@ -29,7 +29,7 @@
 <meta property="og:image:alt" content="Barra de menus do Mac com o ícone do Toolbelt e o painel aberto.">
 <meta name="twitter:card" content="summary_large_image">
 <script>document.documentElement.classList.add("js")</script>
-<script src="assets/site.js?v=20261023" defer></script>
+<script src="assets/site.js?v=20261023b" defer></script>
 </head>
 <body>
 <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
@@ -73,6 +73,7 @@
   <symbol id="sf-lifebuoy" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><circle cx="8" cy="8" r="6.2"/><circle cx="8" cy="8" r="2.6"/><path d="M3.6 3.6l2.6 2.6M12.4 3.6 9.8 6.2M3.6 12.4l2.6-2.6M12.4 12.4 9.8 9.8"/></g></symbol>
   <symbol id="sf-info" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><circle cx="8" cy="8" r="6.2"/><path d="M8 7.3v4"/></g><circle cx="8" cy="4.9" r=".85" fill="currentColor"/></symbol>
   <symbol id="github-mark" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></symbol>
+  <symbol id="glyph-star" viewBox="0 0 16 16"><path d="M8 1.6l1.95 4.05 4.45.6-3.25 3.1.8 4.4L8 11.6l-3.95 2.15.8-4.4-3.25-3.1 4.45-.6Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></symbol>
   <symbol id="glyph-chevron" viewBox="0 0 16 16"><path d="M6 3.5L10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
@@ -461,7 +462,7 @@
       </div>
       <div class="install__footer">
         <a class="button button--primary" href="/download">Baixar para macOS</a>
-        <a class="button button--quiet github-link" href="https://github.com/nandobrazil/toolbelt"><svg aria-hidden="true"><use href="#github-mark"/></svg>Código aberto no GitHub</a>
+        <a class="button button--outline github-link" href="https://github.com/nandobrazil/toolbelt"><svg aria-hidden="true"><use href="#glyph-star"/></svg>Deixe uma estrela no GitHub</a>
         <p class="install__requirements">Requer macOS 14 Sonoma ou mais novo, num Mac com Apple Silicon ou Intel. As contas do Claude precisam do Claude Code instalado.</p>
       </div>
     </div>
@@ -502,17 +503,17 @@
 
 <footer class="site-footer">
   <div class="container site-footer__inner">
-    <p class="site-footer__brand"><svg aria-hidden="true"><use href="#belt-closed"/></svg>Toolbelt <span class="site-footer__version">v0.2.3 · <a href="https://github.com/nandobrazil/toolbelt/blob/main/LICENSE">Licença GPL-3.0</a></span></p>
+    <p class="site-footer__brand"><svg aria-hidden="true"><use href="#belt-closed"/></svg>Toolbelt <span class="site-footer__version">v0.2.4 · <a href="https://github.com/nandobrazil/toolbelt/blob/main/LICENSE">Licença GPL-3.0</a></span></p>
     <nav class="site-footer__links" aria-label="Rodapé">
       <a href="/download">Baixar</a>
-      <a class="github-link" href="https://github.com/nandobrazil/toolbelt"><svg aria-hidden="true"><use href="#github-mark"/></svg>Código aberto no GitHub</a>
+      <a class="github-link" href="https://github.com/nandobrazil/toolbelt"><svg aria-hidden="true"><use href="#glyph-star"/></svg>Deixe uma estrela no GitHub</a>
       <a href="/changelog">Novidades da versão</a>
       <a href="/en/" hreflang="en" lang="en">English</a>
       <a href="#topo">Voltar ao topo</a>
     </nav>
   </div>
 </footer>
-<dialog class="settings-dialog" id="settings-dialog" role="dialog" aria-modal="true" aria-label="Configurações do Toolbelt" data-shots="assets/shots/pt/" data-alt-prefix="Configurações do Toolbelt, página ">
+<dialog class="settings-dialog" id="settings-dialog" data-shots-version="20261023b" role="dialog" aria-modal="true" aria-label="Configurações do Toolbelt" data-shots="assets/shots/pt/" data-alt-prefix="Configurações do Toolbelt, página ">
   <div class="settings-window">
     <div class="settings-window__sidebar">
       <div class="settings-window__lights">

@@ -350,6 +350,16 @@ html[lang="en"] {
   filter: brightness(1.05);
 }
 
+.button--outline {
+  border: 1px solid var(--steel);
+  color: var(--ink);
+}
+
+.button--outline:hover {
+  border-color: var(--ink);
+  background: var(--buckle-soft);
+}
+
 .button--quiet {
   padding-inline: 0.4rem;
   text-decoration: underline;
@@ -1754,6 +1764,15 @@ html:has(.settings-dialog[open]) {
   width: 100%;
   max-width: 36.25rem;
   height: auto;
+}
+
+.shot,
+.shot-window__page,
+.settings-window__page {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
 }
 
 .settings-window__page.is-loading {

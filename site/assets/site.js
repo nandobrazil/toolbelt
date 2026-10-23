@@ -128,7 +128,7 @@ function connectSettings(dialog, triggers) {
     page.width = Number(tab.dataset.width);
     page.height = Number(tab.dataset.height);
     page.alt = `${dialog.dataset.altPrefix}${label}`;
-    const source = `${dialog.dataset.shots}settings-${tab.dataset.page}.webp`;
+    const source = `${dialog.dataset.shots}settings-${tab.dataset.page}.webp?v=${dialog.dataset.shotsVersion}`;
     if (page.getAttribute("src") !== source) {
       page.classList.add("is-loading");
       page.src = source;

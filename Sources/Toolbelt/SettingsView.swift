@@ -1130,6 +1130,8 @@ private struct SupportSettingsPage: View {
 }
 
 private struct AboutPage: View {
+    private static let repositoryURL = URL(string: "https://github.com/nandobrazil/toolbelt")!
+
     private var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
     }
@@ -1143,8 +1145,20 @@ private struct AboutPage: View {
                 .font(.largeTitle.bold())
             Text("Versão \(version)")
                 .foregroundStyle(.secondary)
+            VStack(spacing: 8) {
+                Text("Gostou do Toolbelt? Uma estrela no GitHub ajuda mais gente a encontrá-lo.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Link(destination: Self.repositoryURL) {
+                    Label("Deixe uma estrela no GitHub", systemImage: "star")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+            }
+            .padding(.top, 6)
             HStack {
-                Link("Repositório no GitHub", destination: URL(string: "https://github.com/nandobrazil/toolbelt")!)
+                Link("Repositório no GitHub", destination: Self.repositoryURL)
                 Text("·").foregroundStyle(.tertiary)
                 Button("Abrir log") {
                     let log = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Toolbelt.log")
