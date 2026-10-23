@@ -23,7 +23,21 @@ Onde cada coisa fica:
 4. **Chave do Radar** no Keychain, item **"Toolbelt Radar key"** (conta `toolbelt`): é a chave `rk_…` do projeto Toolbelt em https://radar.oconde.dev, que o `release.sh` embute no app (ambiente `production`) e o `install.sh` embute nos builds locais (ambiente `development`). Sem ela o `release.sh` recusa. Nova chave: Radar → projeto Toolbelt → Configurações → Chaves, e `security add-generic-password -U -a toolbelt -s "Toolbelt Radar key" -w` (pede a chave sem ecoar).
 5. **Backup do certificado:** `Toolbelt - Developer ID Application (Fernando Conde) - backup.p12` no Google Drive; a senha está no Keychain, item "Toolbelt Developer ID .p12 (Google Drive)". Para restaurar noutro Mac: abrir o `.p12` com essa senha.
 
-## A cada versão
+## Automático: push na main
+
+O workflow `compatibility.yml` ("Compatibilidade e release") roda a cada push na `main` que mexa no app. Primeiro a matriz macOS 14/15/26 (build, testes, app aberto por 20 s); se ela passar e o `VERSION` ainda não tiver tag `v<versão>` (e o `CHANGELOG.md` tiver a seção `## <versão>`), o job **Release** num runner `macos-26`:
+
+1. importa o Developer ID num keychain temporário (segredos `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`);
+2. roda `scripts/release.sh` (build universal, assinatura, notarização com `NOTARY_APPLE_ID`/`NOTARY_TEAM_ID`/`NOTARY_PASSWORD`, DMG, zip, `latest.json`, chave `RADAR_KEY` embutida);
+3. roda `scripts/publish-release.sh` com `RELEASES_TOKEN` (token fino só com Contents: read/write em `toolbelt-releases`): release pública, tag `v<versão>` no código e conferência do feed;
+4. manda `release.published` ao Radar (marca a versão nova no projeto Toolbelt);
+5. apaga o keychain temporário.
+
+Para lançar: subir o `VERSION`, escrever a seção no `CHANGELOG.md`, commit e push. Push sem versão nova só testa. Os apps instalados veem a versão no feed (ao abrir, ao acordar o Mac e a cada 24 h) e mostram o aviso e a notificação.
+
+## Manual (sem CI)
+
+### A cada versão
 
 1. Suba `VERSION` (semver) e escreva a seção `## <versão>` no `CHANGELOG.md`; cada linha `- ` vira uma nota no aviso de atualização.
 2. Commit.

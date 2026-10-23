@@ -20,11 +20,16 @@ if [ -z "$identity" ]; then
   echo "no 'Developer ID Application' identity in the keychain (see docs/releasing.md)" >&2
   exit 1
 fi
-if ! xcrun notarytool history --keychain-profile "$notary_profile" >/dev/null 2>&1; then
-  echo "notary profile '$notary_profile' not found (see docs/releasing.md)" >&2
+if [ -n "${TOOLBELT_NOTARY_APPLE_ID:-}" ]; then
+  notary_auth=(--apple-id "$TOOLBELT_NOTARY_APPLE_ID" --team-id "$TOOLBELT_NOTARY_TEAM_ID" --password "$TOOLBELT_NOTARY_PASSWORD")
+else
+  notary_auth=(--keychain-profile "$notary_profile")
+fi
+if ! xcrun notarytool history "${notary_auth[@]}" >/dev/null 2>&1; then
+  echo "notarization credentials rejected (profile '$notary_profile' or TOOLBELT_NOTARY_* variables, see docs/releasing.md)" >&2
   exit 1
 fi
-radar_key="$(security find-generic-password -s "Toolbelt Radar key" -w 2>/dev/null || true)"
+radar_key="${TOOLBELT_RADAR_KEY:-$(security find-generic-password -s "Toolbelt Radar key" -w 2>/dev/null || true)}"
 if [[ ! "$radar_key" =~ ^rk_[A-Za-z0-9]{40}$ ]]; then
   echo "no Radar ingest key in the keychain item 'Toolbelt Radar key' (see docs/releasing.md)" >&2
   exit 1
@@ -41,14 +46,14 @@ fi
 notarize() {
   local file="$1"
   local result
-  result="$(xcrun notarytool submit "$file" --keychain-profile "$notary_profile" --wait --output-format json)"
+  result="$(xcrun notarytool submit "$file" "${notary_auth[@]}" --wait --output-format json)"
   local status
   status="$(printf '%s' "$result" | plutil -extract status raw -o - -)"
   if [ "$status" != "Accepted" ]; then
     local submission
     submission="$(printf '%s' "$result" | plutil -extract id raw -o - -)"
     echo "notarization of $(basename "$file") ended as '$status'" >&2
-    xcrun notarytool log "$submission" --keychain-profile "$notary_profile" >&2 || true
+    xcrun notarytool log "$submission" "${notary_auth[@]}" >&2 || true
     exit 1
   fi
   echo "notarized $(basename "$file")"
