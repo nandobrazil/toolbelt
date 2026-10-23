@@ -95,7 +95,7 @@ final class ToolbeltPanel {
         }
     }
 
-    private func makeContent(
+    func makeContent(
         hiddenExtras: [MenuBarExtra]?,
         columns: Int,
         sections: [NSView],
@@ -103,9 +103,7 @@ final class ToolbeltPanel {
         trailingActions: [PanelAction],
         onSelectExtra: @escaping (MenuBarExtra) -> Void
     ) -> NSView {
-        let background = NSVisualEffectView()
-        background.material = .menu
-        background.state = .active
+        let background = OffscreenRendering.background(material: .menu)
         background.wantsLayer = true
         background.layer?.cornerRadius = 10
         background.layer?.masksToBounds = true

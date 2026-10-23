@@ -144,17 +144,9 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
     private func makeBackdrop() -> NSView {
         switch appearance.background {
         case .glass:
-            let view = NSVisualEffectView()
-            view.material = .hudWindow
-            view.blendingMode = .behindWindow
-            view.state = .active
-            return view
+            return OffscreenRendering.background(material: .hudWindow)
         case .frosted:
-            let view = NSVisualEffectView()
-            view.material = .popover
-            view.blendingMode = .behindWindow
-            view.state = .active
-            return view
+            return OffscreenRendering.background(material: .popover)
         case .solid:
             let view = NSView()
             view.wantsLayer = true
@@ -163,12 +155,26 @@ final class ClipboardPicker: NSObject, NSTableViewDataSource, NSTableViewDelegat
         }
     }
 
-    private func resizeAndPosition() {
-        guard let panel else { return }
+    func makeSnapshotContent() -> NSView {
+        query = ""
+        updateQueryLabel()
+        refreshEntries()
+        let content = makeContent()
+        content.frame = NSRect(x: 0, y: 0, width: width, height: contentHeight)
+        selectRow(0)
+        return content
+    }
+
+    private var contentHeight: CGFloat {
         let rowsHeight = visibleEntries.reduce(CGFloat(0)) { total, entry in
             total + rowHeight(for: entry) + tableView.intercellSpacing.height
         }
-        let height = min(maximumHeight, max(rowsHeight, textRowHeight) + Self.headerHeight + 8)
+        return min(maximumHeight, max(rowsHeight, textRowHeight) + Self.headerHeight + 8)
+    }
+
+    private func resizeAndPosition() {
+        guard let panel else { return }
+        let height = contentHeight
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
         let bounds = screen?.visibleFrame ?? .zero

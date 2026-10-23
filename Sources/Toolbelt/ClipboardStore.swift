@@ -21,7 +21,11 @@ struct ClipboardEntry: Codable, Equatable {
 
 final class ClipboardStore {
 
-    private let directory = AppPaths.support
+    private let directory: URL
+
+    init(directory: URL = AppPaths.support) {
+        self.directory = directory
+    }
     private lazy var imagesDirectory: URL = {
         let url = directory.appendingPathComponent("clipboard-images", isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

@@ -3,11 +3,11 @@ import AppKit
 final class AppSwitcherModule: ToolbeltModule {
     let identifier = "appSwitcher"
     let title = String(localized: "Alternar janelas")
-    let summary = String(localized: "⌥⇥ mostra todas as janelas abertas e troca entre elas, como o AltTab.")
+    let summary = String(localized: "⌥⇥ mostra todas as janelas abertas e troca entre elas.")
     let symbolName = "rectangle.on.rectangle"
     let requiresAccessibility = true
 
-    private static let keyHints = String(localized: "W fechar · M minimizar · H esconder app · Q fechar app · / buscar")
+    static let keyHints = String(localized: "W fechar · M minimizar · H esconder app · Q fechar app · / buscar")
     private static let cachedThumbnailSize = CGSize(width: 204, height: 130)
 
     private let panel = SwitcherPanel()
@@ -384,9 +384,64 @@ final class SwitcherPanel {
         close()
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         let bounds = screen?.visibleFrame ?? .zero
+        mouseLocationAtShow = previousMouseLocation
+        isHoverActive = wasHoverActive
+        let background = makeContent(
+            windows: windows,
+            selectedIndex: selectedIndex,
+            iconSize: iconSize,
+            showsThumbnails: showsThumbnails,
+            cachedThumbnails: cachedThumbnails,
+            footer: footer,
+            emptyMessage: emptyMessage,
+            availableWidth: bounds.width
+        )
+        let size = background.frame.size
+
+        let panel = SwitcherWindow(
+            contentRect: NSRect(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2, width: size.width, height: size.height),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.level = .popUpMenu
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+        panel.hidesOnDeactivate = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+        panel.acceptsMouseMovedEvents = true
+        panel.contentView = background
+        panel.makeKeyAndOrderFront(nil)
+        window = panel
+        select(selectedIndex)
+
+        guard showsThumbnails, capturesLiveThumbnails else { return }
+        let tileWidth = Self.thumbnailTileWidth
+        let tilesByWindow = Dictionary(uniqueKeysWithValues: zip(windows.map(\.windowID), tiles))
+        let visibleWindowIDs = windows.filter { !$0.isMinimized }.map(\.windowID)
+        thumbnailTask = WindowThumbnails.capture(
+            windowIDs: visibleWindowIDs,
+            maximumSize: CGSize(width: tileWidth - 16, height: Self.thumbnailHeight)
+        ) { identifier, image in
+            tilesByWindow[identifier]?.thumbnail = image
+            onLiveThumbnail(identifier, image)
+        }
+    }
+
+    func makeContent(
+        windows: [SwitchableWindow],
+        selectedIndex: Int,
+        iconSize: CGFloat,
+        showsThumbnails: Bool,
+        cachedThumbnails: [CGWindowID: NSImage],
+        footer: String,
+        emptyMessage: String?,
+        availableWidth: CGFloat
+    ) -> NSView {
         let tileWidth = showsThumbnails ? Self.thumbnailTileWidth : Self.tileWidth
         let tileHeight = showsThumbnails ? Self.thumbnailHeight + 48 : iconSize + 52
-        let maximumColumns = max(1, Int((bounds.width * 0.9 - Self.padding * 2 + Self.tileSpacing) / (tileWidth + Self.tileSpacing)))
+        let maximumColumns = max(1, Int((availableWidth * 0.9 - Self.padding * 2 + Self.tileSpacing) / (tileWidth + Self.tileSpacing)))
         let columns = max(1, min(windows.count, maximumColumns))
         let rows = max(1, Int(ceil(Double(windows.count) / Double(columns))))
         let footerSpace = footer.isEmpty ? 0 : Self.footerHeight
@@ -396,10 +451,8 @@ final class SwitcherPanel {
         let height = gridHeight + Self.padding * 2 + footerSpace
         let gridOriginX = (width - gridWidth) / 2
 
-        let background = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: width, height: height))
-        background.material = .hudWindow
-        background.blendingMode = .behindWindow
-        background.state = .active
+        let background = OffscreenRendering.background(material: .hudWindow)
+        background.frame = NSRect(x: 0, y: 0, width: width, height: height)
         background.wantsLayer = true
         background.layer?.cornerRadius = 16
         background.layer?.masksToBounds = true
@@ -412,8 +465,6 @@ final class SwitcherPanel {
         selectionView.isHidden = windows.isEmpty
         background.addSubview(selectionView)
         selectedTileIndex = nil
-        mouseLocationAtShow = previousMouseLocation
-        isHoverActive = wasHoverActive
 
         tiles = windows.enumerated().map { index, item in
             let column = index % columns
@@ -454,35 +505,8 @@ final class SwitcherPanel {
             footerLabel.frame = NSRect(x: 10, y: 8, width: width - 20, height: 16)
             background.addSubview(footerLabel)
         }
-
-        let panel = SwitcherWindow(
-            contentRect: NSRect(x: bounds.midX - width / 2, y: bounds.midY - height / 2, width: width, height: height),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        panel.level = .popUpMenu
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
-        panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
-        panel.acceptsMouseMovedEvents = true
-        panel.contentView = background
-        panel.makeKeyAndOrderFront(nil)
-        window = panel
         select(selectedIndex)
-
-        guard showsThumbnails, capturesLiveThumbnails else { return }
-        let tilesByWindow = Dictionary(uniqueKeysWithValues: zip(windows.map(\.windowID), tiles))
-        let visibleWindowIDs = windows.filter { !$0.isMinimized }.map(\.windowID)
-        thumbnailTask = WindowThumbnails.capture(
-            windowIDs: visibleWindowIDs,
-            maximumSize: CGSize(width: tileWidth - 16, height: Self.thumbnailHeight)
-        ) { identifier, image in
-            tilesByWindow[identifier]?.thumbnail = image
-            onLiveThumbnail(identifier, image)
-        }
+        return background
     }
 
     func select(_ index: Int) {

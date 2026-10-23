@@ -89,7 +89,7 @@ final class AppUpdater: NSObject, ObservableObject {
     }
 
     var canInstallInPlace: Bool {
-        Self.teamIdentifier(of: Bundle.main.bundleURL) != nil
+        OffscreenRendering.isActive || Self.teamIdentifier(of: Bundle.main.bundleURL) != nil
     }
 
     private var feedURL: URL? {

@@ -8,7 +8,7 @@
 "%@ de %@" = "%@ of %@";
 "%@ foi movido." = "%@ was moved.";
 "%@ livres" = "%@ free";
-"%@ mostra todas as janelas abertas e troca entre elas, como o AltTab." = "%@ shows all open windows and switches between them, like AltTab.";
+"%@ mostra todas as janelas abertas e troca entre elas." = "%@ shows all open windows and switches between them.";
 "%@ não cabe na barra agora (está fora da tela). Esconda outro ícone antes ou use o modo organizar." = "%@ doesn't fit in the menu bar right now (it's offscreen). Hide another icon first or use arrange mode.";
 "%@ não estava onde eu esperava. Nada foi clicado; tente de novo." = "%@ wasn't where I expected. Nothing was clicked; try again.";
 "%@ se mexeu, mas não ficou exatamente onde você soltou. Arraste de novo." = "%@ moved, but didn't stay exactly where you dropped it. Drag again.";
@@ -96,7 +96,7 @@
 "Barra de menus" = "Menu bar";
 "Buscar: %@  ·  ⏎ trocar · ⌫ apagar · ⎋ fechar" = "Search: %@  ·  ⏎ switch · ⌫ delete · ⎋ close";
 "Cada conta tem seu próprio login; conversas, memória, skills e configurações são compartilhadas. No terminal: cca use <número ou apelido>, cca swap, cca resume." = "Each account has its own login; conversations, memory, skills, and settings are shared. In Terminal: cca use <number or alias>, cca swap, cca resume.";
-"Cada print ocupa alguns MB. Senhas copiadas de gerenciadores como 1Password e Bitwarden nunca entram no histórico." = "Each screenshot takes up a few MB. Passwords copied from managers like 1Password and Bitwarden are never added to history.";
+"Cada print ocupa alguns MB. Senhas copiadas de gerenciadores de senha nunca entram no histórico." = "Each screenshot takes up a few MB. Passwords copied from password managers are never added to history.";
 "Caixa de ferramentas" = "Toolbox";
 "Cancelar" = "Cancel";
 "Canto inferior direito" = "Bottom right";
@@ -380,4 +380,4 @@
 "Útil para bancos, gerenciadores de senha sem marcação e apps com dados sensíveis." = "Useful for banks, unmarked password managers, and apps with sensitive data.";
 "• %@" = "• %@";
 "⌥ clique no ícone liga e desliga o modo organizar." = "⌥-click the icon to turn arrange mode on or off.";
-"⌥⇥ mostra todas as janelas abertas e troca entre elas, como o AltTab." = "⌥⇥ shows all open windows and switches between them, like AltTab.";
+"⌥⇥ mostra todas as janelas abertas e troca entre elas." = "⌥⇥ shows all open windows and switches between them.";

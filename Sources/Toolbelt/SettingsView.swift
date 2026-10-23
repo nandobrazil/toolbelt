@@ -137,7 +137,7 @@ struct SettingsView: View {
             }
             .navigationSplitViewColumnWidth(min: 190, ideal: 200, max: 240)
         } detail: {
-            detail
+            SettingsPage(section: bridge.selection, settings: settings, bridge: bridge, updater: updater)
                 .navigationTitle(bridge.selection.title)
         }
         .frame(minWidth: 720, minHeight: 500)
@@ -146,10 +146,16 @@ struct SettingsView: View {
             bridge.refresh()
         }
     }
+}
 
-    @ViewBuilder
-    private var detail: some View {
-        switch bridge.selection {
+struct SettingsPage: View {
+    let section: SettingsSection
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var bridge: SettingsBridge
+    @ObservedObject var updater: AppUpdater
+
+    var body: some View {
+        switch section {
         case .general: GeneralSettingsPage(settings: settings, bridge: bridge, updater: updater)
         case .menuBar: MenuBarSettingsPage(settings: settings, bridge: bridge)
         case .switcher: AppSwitcherSettingsPage(settings: settings)
@@ -439,7 +445,7 @@ private struct ClipboardSettingsPage: View {
             } header: {
                 Text("Histórico")
             } footer: {
-                Text("Cada print ocupa alguns MB. Senhas copiadas de gerenciadores como 1Password e Bitwarden nunca entram no histórico.")
+                Text("Cada print ocupa alguns MB. Senhas copiadas de gerenciadores de senha nunca entram no histórico.")
             }
 
             ClipboardArchiveSection(settings: settings)
@@ -668,7 +674,7 @@ private struct AppSwitcherSettingsPage: View {
 
     var body: some View {
         Form {
-            ModuleToggleSection(settings: settings, section: .switcher, summary: "\(shortcutDisplay) mostra todas as janelas abertas e troca entre elas, como o AltTab.")
+            ModuleToggleSection(settings: settings, section: .switcher, summary: "\(shortcutDisplay) mostra todas as janelas abertas e troca entre elas.")
 
             Section {
                 LabeledContent("Todas as janelas") {

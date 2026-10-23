@@ -1,5 +1,9 @@
 import AppKit
 
+if let screenshotsDirectory = LandingScreenshots.outputDirectory(in: CommandLine.arguments) {
+    LandingScreenshots.render(into: screenshotsDirectory)
+}
+
 if isatty(STDERR_FILENO) == 0 {
     let logPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Toolbelt.log").path
     freopen(logPath, "a", stderr)

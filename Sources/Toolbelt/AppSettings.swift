@@ -465,10 +465,11 @@ struct SettingsValues: Codable, Equatable {
 }
 
 final class AppSettings: ObservableObject {
+    static var storage = UserDefaults.standard
     static let shared = AppSettings()
 
     private static let storageKey = "settings.v1"
-    private let defaults = UserDefaults.standard
+    private let defaults = AppSettings.storage
 
     @Published var values: SettingsValues {
         didSet {
@@ -515,7 +516,7 @@ enum LaunchAtLogin {
     }
 
     static var isEnabled: Bool {
-        SMAppService.mainApp.status == .enabled
+        OffscreenRendering.isActive || SMAppService.mainApp.status == .enabled
     }
 
     static func setEnabled(_ enabled: Bool) {
