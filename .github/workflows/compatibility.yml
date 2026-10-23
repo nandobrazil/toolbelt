@@ -127,6 +127,20 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           scripts/publish-release.sh
 
+      - name: Atualizar o cask no homebrew-tap
+        if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          SHA="$(shasum -a 256 "dist/Toolbelt-$VERSION.dmg" | cut -c1-64)"
+          git clone -q "https://x-access-token:${GH_TOKEN}@github.com/nandobrazil/homebrew-tap.git" "$RUNNER_TEMP/homebrew-tap"
+          cd "$RUNNER_TEMP/homebrew-tap"
+          sed -i '' -E "s/^  version \".*\"/  version \"$VERSION\"/; s/^  sha256 \".*\"/  sha256 \"$SHA\"/" Casks/toolbelt.rb
+          grep -E '^  (version|sha256) ' Casks/toolbelt.rb
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qam "Toolbelt $VERSION"
+          git push -q origin HEAD
+
       - name: Marcar a release no Radar
         if: steps.version.outputs.publish == 'true'
         env:

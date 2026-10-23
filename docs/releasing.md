@@ -37,8 +37,9 @@ O workflow `compatibility.yml` ("Compatibilidade e release") roda a cada push na
 1. importa o Developer ID num keychain temporário (segredos `DEVELOPER_ID_P12`, `DEVELOPER_ID_P12_PASSWORD`);
 2. roda `scripts/release.sh` (build universal, assinatura, notarização com `NOTARY_APPLE_ID`/`NOTARY_TEAM_ID`/`NOTARY_PASSWORD`, DMG, zip, `latest.json`, chave `RADAR_KEY` embutida);
 3. roda `scripts/publish-release.sh` com `RELEASES_TOKEN` (token fino só com Contents: read/write em `toolbelt-releases`): release pública, tag `v<versão>` no código e conferência do feed;
-4. manda `release.published` ao Radar (marca a versão nova no projeto Toolbelt);
-5. apaga o keychain temporário.
+4. atualiza `version` e `sha256` do cask em https://github.com/nandobrazil/homebrew-tap (`brew install --cask nandobrazil/tap/toolbelt`), com o mesmo `RELEASES_TOKEN` (o token precisa de Contents: read/write também no `homebrew-tap`);
+5. manda `release.published` ao Radar (marca a versão nova no projeto Toolbelt);
+6. apaga o keychain temporário.
 
 Para lançar: subir o `VERSION`, escrever a seção no `CHANGELOG.md`, commit e push. Push sem versão nova só testa. Os apps instalados veem a versão no feed (ao abrir, ao acordar o Mac e a cada 24 h) e mostram o aviso e a notificação.
 

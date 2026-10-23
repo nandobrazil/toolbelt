@@ -1549,6 +1549,29 @@ html[lang="en"] {
   text-underline-offset: 0.2em;
 }
 
+.install__brew {
+  margin-top: 2.5rem;
+  color: var(--steel);
+}
+
+.install__brew a {
+  color: var(--ink);
+  text-underline-offset: 0.2em;
+}
+
+.install__command {
+  margin-top: 0.6rem;
+  padding: 0.85rem 1.1rem;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  font: 500 0.9375rem/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+  user-select: all;
+}
+
 .install__footer {
   display: flex;
   flex-wrap: wrap;

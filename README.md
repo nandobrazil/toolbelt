@@ -31,6 +31,14 @@
 
 ## Instalação
 
+Pelo [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask nandobrazil/tap/toolbelt
+```
+
+Ou à mão:
+
 1. **Baixe** o [Toolbelt.dmg](https://toolbelt.oconde.dev/download).
 2. **Abra o DMG e arraste** o Toolbelt para a pasta Aplicativos.
 3. **Abra o Toolbelt.** O cinto aparece na barra de menus. Quando o macOS pedir, libere em **Ajustes do Sistema → Privacidade e Segurança → Acessibilidade**.

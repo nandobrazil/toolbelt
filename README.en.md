@@ -31,6 +31,14 @@
 
 ## Install
 
+With [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask nandobrazil/tap/toolbelt
+```
+
+Or by hand:
+
 1. **Download** [Toolbelt.dmg](https://toolbelt.oconde.dev/download).
 2. **Open the DMG and drag** Toolbelt into the Applications folder.
 3. **Open Toolbelt.** The belt shows up in the menu bar. When macOS asks, allow it in **System Settings → Privacy & Security → Accessibility**.
