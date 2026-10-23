@@ -2,7 +2,7 @@
 
 ## Estado em 2026-10-22
 
-Tudo instalado em `~/Applications/Toolbelt.app` e no GitHub (`main`). Módulos ligados: barra de menus, alternar janelas, área de transferência, janelas, monitor do sistema, contas do Claude.
+O app do dono é a release oficial instalada pelo Homebrew em `/Applications/Toolbelt.app` (0.2.1); os builds locais do `install.sh` são assinados com o Developer ID e substituem essa mesma cópia. Código aberto no GitHub (`main`). Módulos ligados: barra de menus, alternar janelas, área de transferência, janelas, monitor do sistema, contas do Claude.
 
 Versão 0.2.0 preparada para distribuição: ícone do app, bundle com versão/build, `cca` e `macscan` dentro do app, hardened runtime e entitlements, login automático via `SMAppService`, atualizador (`AppUpdater`), scripts de release (Developer ID, notarização, DMG, zip, `latest.json`) e landing em https://toolbelt.oconde.dev, no VPS de produção desde 22/10/2026 (ficou algumas horas no de dev; o namespace de lá está parado em zero réplicas esperando o OK do dono para apagar). O projeto também aparece no portfólio em https://oconde.dev/projetos/toolbelt/. **Falta a primeira release**: depende do certificado Developer ID e da credencial do notarytool na máquina (passo a passo em `docs/releasing.md`).
 
@@ -49,7 +49,7 @@ Versão 0.2.0 preparada para distribuição: ícone do app, bundle com versão/b
 ## Pendências e ideias
 
 - 0.2.0 publicada em 22/10/2026 (notarizada, DMG e zip em `toolbelt-releases`). Próxima: 0.3.0 com inglês, editor da barra e relatórios, depois de o dono confirmar o arrasto do editor.
-- Na troca de versão, o app do dono (build local em `~/Applications`, assinatura local) não instala atualização no lugar: o botão abre a página. Para testar a troca de verdade, instalar o DMG da 0.2.0 em `/Applications` (ou assinar o build local com o Developer ID) e publicar a 0.3.0.
+- Testar a atualização no lugar de verdade: a próxima release (0.2.2) deve atualizar sozinha a 0.2.1 do Homebrew em `/Applications`.
 - Depois da primeira release, testar a troca de versão de verdade (0.2.0 → 0.2.1) pelo botão Atualizar.
 
 - Investigar por que `panelShowsClaude`/`panelShowsSystem` apareceram `false` sem ação do usuário (foram religados). Se repetir, pode ser bug ao salvar.

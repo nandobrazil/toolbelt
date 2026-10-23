@@ -509,6 +509,7 @@ final class AppSettings: ObservableObject {
 enum LaunchAtLogin {
     private static let legacyLabel = "dev.oconde.toolbelt"
     private static let configuredKey = "launchAtLogin.configured"
+    private static let registeredPathKey = "launchAtLogin.bundlePath"
 
     private static var legacyAgentURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
@@ -523,8 +524,10 @@ enum LaunchAtLogin {
         do {
             if enabled {
                 try SMAppService.mainApp.register()
+                UserDefaults.standard.set(Bundle.main.bundlePath, forKey: registeredPathKey)
             } else {
                 try SMAppService.mainApp.unregister()
+                UserDefaults.standard.removeObject(forKey: registeredPathKey)
             }
         } catch {
             NSLog("Toolbelt: launch at login enabled=\(enabled) failed: \(error.localizedDescription)")
@@ -536,6 +539,10 @@ enum LaunchAtLogin {
         let hadLegacyAgent = FileManager.default.fileExists(atPath: legacyAgentURL.path)
         if hadLegacyAgent {
             try? FileManager.default.removeItem(at: legacyAgentURL)
+        }
+        if let registeredPath = defaults.string(forKey: registeredPathKey), registeredPath != Bundle.main.bundlePath {
+            NSLog("Toolbelt: app moved from \(registeredPath), registering the login item again")
+            setEnabled(true)
         }
         guard hadLegacyAgent || !defaults.bool(forKey: configuredKey) else { return }
         defaults.set(true, forKey: configuredKey)

@@ -42,6 +42,18 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         }
     }
 
+    var enableTitle: String {
+        switch self {
+        case .menuBar: return String(localized: "Ativar a barra de menus")
+        case .switcher: return String(localized: "Ativar o alternador de janelas")
+        case .clipboard: return String(localized: "Ativar o histórico da área de transferência")
+        case .windows: return String(localized: "Ativar os atalhos de janela")
+        case .system: return String(localized: "Ativar o monitor do sistema")
+        case .claude: return String(localized: "Ativar as contas do Claude")
+        case .general, .support, .about: return title
+        }
+    }
+
     var moduleIdentifier: String? {
         switch self {
         case .menuBar: return "menuBarOverflow"
@@ -182,7 +194,7 @@ private struct ModuleToggleSection: View {
                     set: { settings.setModule(identifier, enabled: $0) }
                 )) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Ativar \(section.title.lowercased())")
+                        Text(section.enableTitle)
                         Text(summary)
                             .font(.caption)
                             .foregroundStyle(.secondary)

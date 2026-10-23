@@ -28,9 +28,9 @@ Infra comum: `AppController` (orquestra módulos, cinto, painel), `AppSettings` 
 scripts/install.sh
 ```
 
-Compila em release com `memcap` (teto de 2 GB; regra de memória do Mac de 16 GB), monta `~/Applications/Toolbelt.app` com `scripts/assemble-app.sh` (Info.plist com `VERSION` e o número de commits como build, ícone `Resources/AppIcon.icns`, `cca` e `macscan` em `Contents/Resources/bin`), assina com o certificado autoassinado **Toolbelt Local Signing** com hardened runtime e `Resources/Toolbelt.entitlements`, encerra a cópia em execução (SIGTERM, que devolve o ⌘⇥ ao macOS) e abre a nova com `open`. Log em `~/Library/Logs/Toolbelt.log` (o próprio app redireciona o stderr para lá).
+Compila em release com `memcap` (teto de 2 GB; regra de memória do Mac de 16 GB), monta `/Applications/Toolbelt.app` (ou `~/Applications` sem Developer ID) com `scripts/assemble-app.sh` (Info.plist com `VERSION` e o número de commits como build, ícone `Resources/AppIcon.icns`, `cca` e `macscan` em `Contents/Resources/bin`), assina com o **Developer ID** do Keychain (ou, sem ele, com o certificado autoassinado **Toolbelt Local Signing**) com hardened runtime e `Resources/Toolbelt.entitlements`, encerra a cópia em execução (SIGTERM, que devolve o ⌘⇥ ao macOS) e abre a nova com `open`. Log em `~/Library/Logs/Toolbelt.log` (o próprio app redireciona o stderr para lá).
 
-O app se registra como item de início pelo `SMAppService` na primeira abertura e apaga o LaunchAgent antigo `dev.oconde.toolbelt` se existir. Parar: `pkill -x Toolbelt`. Abrir: `open ~/Applications/Toolbelt.app`.
+O app se registra como item de início pelo `SMAppService` na primeira abertura e apaga o LaunchAgent antigo `dev.oconde.toolbelt` se existir. Parar: `pkill -x Toolbelt`. Abrir: `open /Applications/Toolbelt.app`. Se o app mudar de lugar, ele refaz o item de início sozinho.
 
 Em máquina nova, criar o certificado antes: `scripts/create-signing-identity.sh`. Assinatura ad-hoc faz o macOS esquecer Acessibilidade e Gravação de Tela a cada build.
 

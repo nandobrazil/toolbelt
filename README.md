@@ -38,6 +38,8 @@ Pelo [Homebrew](https://brew.sh):
 brew install --cask nandobrazil/tap/toolbelt
 ```
 
+Se o Homebrew avisar que o tap não é confiável, rode `brew trust --tap nandobrazil/tap` uma vez.
+
 Ou à mão:
 
 1. **Baixe** o [Toolbelt.dmg](https://toolbelt.oconde.dev/download).
@@ -110,7 +112,7 @@ scripts/create-signing-identity.sh
 scripts/install.sh
 ```
 
-O `create-signing-identity.sh` cria uma vez o certificado local, que mantém as permissões entre builds. O `install.sh` compila em release (Swift 5.9, sem dependências), monta `~/Applications/Toolbelt.app` e abre o app.
+O `create-signing-identity.sh` cria uma vez o certificado local, que mantém as permissões entre builds. O `install.sh` compila em release (Swift 5.9, sem dependências), monta `~/Applications/Toolbelt.app` e abre o app; com um certificado Developer ID no Keychain, assina com ele e instala em `/Applications`.
 
 - [Arquitetura e módulos](docs/architecture.md)
 - [Como publicar uma versão](docs/releasing.md): Developer ID, notarização, DMG e atualização automática

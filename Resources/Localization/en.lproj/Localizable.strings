@@ -78,7 +78,12 @@
 "Atalhos de teclado para metades, terços, cantos e monitores." = "Keyboard shortcuts for halves, thirds, corners, and displays.";
 "Ativa" = "Active";
 "Ativa agora: %@" = "Active now: %@";
-"Ativar %@" = "Enable %@";
+"Ativar a barra de menus" = "Enable the menu bar";
+"Ativar o alternador de janelas" = "Enable the window switcher";
+"Ativar o histórico da área de transferência" = "Enable clipboard history";
+"Ativar os atalhos de janela" = "Enable window shortcuts";
+"Ativar o monitor do sistema" = "Enable the system monitor";
+"Ativar as contas do Claude" = "Enable Claude accounts";
 "Ative o módulo da barra de menus para organizar os ícones." = "Enable the menu bar module to arrange icons.";
 "Atualizar" = "Update";
 "Atualizar a cada" = "Refresh every";
