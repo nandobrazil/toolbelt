@@ -110,10 +110,12 @@ final class SettingsBridge: ObservableObject {
     }
 
     func requestMenuBarMove(_ identifier: String, to target: MenuBarLayoutTarget) {
+        NSLog("Toolbelt: menu bar move requested for \(identifier) to \(target)")
         guard !isMovingMenuBarItem else { return }
         isMovingMenuBarItem = true
         menuBarMoveOutcome = nil
         moveMenuBarItem(identifier, target) { [weak self] outcome in
+            NSLog("Toolbelt: menu bar move finished: \(outcome.message)")
             guard let self else { return }
             self.isMovingMenuBarItem = false
             self.menuBarLayout = self.loadMenuBarLayout()

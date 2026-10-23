@@ -69,7 +69,7 @@
 "Arquivo" = "File";
 "Arquivos" = "Files";
 "Arraste com ⌘ os ícones para a esquerda deste traço para escondê-los" = "⌘-drag icons to the left of this line to hide them";
-"Arraste um ícone entre as faixas ou para antes de outro, ou use o clique direito nele. O Toolbelt move o ícone de verdade com um ⌘-arrastar na barra (o cursor some por meio segundo) e confere se ele chegou. Relógio e Central de Controle são fixos no macOS; %@ marca o que fica atrás do notch." = "Drag an icon between the two rows or before another, or right-click it. Toolbelt actually moves the icon with a ⌘-drag in the menu bar (the cursor disappears for half a second) and checks if it arrived. The clock and Control Center are fixed in macOS; %@ marks what is behind the notch.";
+"Clique num ícone para mandá-lo para a outra faixa, ou arraste para mudar a ordem. O Toolbelt move o ícone de verdade com um ⌘-arrastar na barra (o cursor some por meio segundo) e confere se ele chegou. Relógio e Central de Controle são fixos no macOS; %@ marca o que fica atrás do notch." = "Click an icon to send it to the other row, or drag it to change the order. Toolbelt actually moves the icon with a ⌘-drag in the menu bar (the pointer disappears for half a second) and checks that it got there. The clock and Control Center are fixed by macOS; %@ marks what sits behind the notch.";
 "Arraste ícones para cá" = "Drag icons here";
 "Atalho" = "Shortcut";
 "Atalho e painel" = "Shortcut and panel";

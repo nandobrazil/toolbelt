@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct MenuBarLayoutPanel: View {
     @ObservedObject var bridge: SettingsBridge
@@ -8,7 +9,7 @@ struct MenuBarLayoutPanel: View {
             Text("O que fica na barra")
                 .font(.headline)
             MenuBarLayoutEditor(bridge: bridge)
-            Text("Arraste um ícone entre as faixas ou para antes de outro, ou use o clique direito nele. O Toolbelt move o ícone de verdade com um ⌘-arrastar na barra (o cursor some por meio segundo) e confere se ele chegou. Relógio e Central de Controle são fixos no macOS; \(Image(systemName: "eye.slash")) marca o que fica atrás do notch.")
+            Text("Clique num ícone para mandá-lo para a outra faixa, ou arraste para mudar a ordem. O Toolbelt move o ícone de verdade com um ⌘-arrastar na barra (o cursor some por meio segundo) e confere se ele chegou. Relógio e Central de Controle são fixos no macOS; \(Image(systemName: "eye.slash")) marca o que fica atrás do notch.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -90,9 +91,11 @@ private struct MenuBarLayoutRow: View {
                 .foregroundStyle(.secondary)
             FlowLayout(spacing: 6) {
                 ForEach(items) { item in
-                    MenuBarChip(item: item) { identifier in
-                        onDrop(identifier, .before(item.id))
-                    }
+                    MenuBarChip(
+                        item: item,
+                        onToggle: { onDrop(item.id, oppositeAction.target) },
+                        onDropBefore: { identifier in onDrop(identifier, .before(item.id)) }
+                    )
                     .contextMenu {
                         if item.isMovable {
                             Button(oppositeAction.title) {
@@ -123,34 +126,62 @@ private struct MenuBarLayoutRow: View {
                 RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(isTargeted ? Color.accentColor : Color.primary.opacity(0.08), lineWidth: isTargeted ? 2 : 1)
             )
-            .dropDestination(for: String.self) { identifiers, _ in
-                guard let identifier = identifiers.first else { return false }
-                onDrop(identifier, endTarget)
-                return true
-            } isTargeted: { isTargeted = $0 }
+            .onDrop(of: MenuBarDrag.types, isTargeted: $isTargeted) { providers in
+                MenuBarDrag.loadIdentifier(from: providers) { identifier in
+                    onDrop(identifier, endTarget)
+                }
+            }
         }
+    }
+}
+
+enum MenuBarDrag {
+    static let types: [UTType] = [.utf8PlainText, .plainText]
+
+    static func provider(for identifier: String) -> NSItemProvider {
+        NSLog("Toolbelt: menu bar editor drag started for \(identifier)")
+        return NSItemProvider(object: identifier as NSString)
+    }
+
+    static func loadIdentifier(from providers: [NSItemProvider], then action: @escaping (String) -> Void) -> Bool {
+        guard let provider = providers.first(where: { $0.canLoadObject(ofClass: NSString.self) }) else {
+            NSLog("Toolbelt: menu bar editor drop without text")
+            return false
+        }
+        _ = provider.loadObject(ofClass: NSString.self) { object, error in
+            guard let identifier = object as? String else {
+                NSLog("Toolbelt: menu bar editor drop failed to load: \(error?.localizedDescription ?? "no value")")
+                return
+            }
+            DispatchQueue.main.async { action(identifier) }
+        }
+        return true
     }
 }
 
 private struct MenuBarChip: View {
     let item: MenuBarLayoutItem
+    let onToggle: () -> Void
     let onDropBefore: (String) -> Void
 
     @State private var isTargeted = false
 
     var body: some View {
-        draggableChip
-            .dropDestination(for: String.self) { identifiers, _ in
-                guard let identifier = identifiers.first, identifier != item.id else { return false }
-                onDropBefore(identifier)
-                return true
-            } isTargeted: { isTargeted = $0 }
+        interactiveChip
+            .onDrop(of: MenuBarDrag.types, isTargeted: $isTargeted) { providers in
+                MenuBarDrag.loadIdentifier(from: providers) { identifier in
+                    guard identifier != item.id else { return }
+                    onDropBefore(identifier)
+                }
+            }
     }
 
     @ViewBuilder
-    private var draggableChip: some View {
+    private var interactiveChip: some View {
         if item.isMovable {
-            chip.draggable(item.id) { chip }
+            Button(action: onToggle) { chip }
+                .buttonStyle(.plain)
+                .onDrag { MenuBarDrag.provider(for: item.id) }
         } else {
             chip
         }
