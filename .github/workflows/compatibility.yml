@@ -129,6 +129,7 @@ jobs:
 
       - name: Atualizar o cask no homebrew-tap
         if: steps.version.outputs.publish == 'true'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- Corrigido o título de cada módulo nas Configurações ("Ativar as contas do Claude" em vez de "Ativar contas do claude").
+- O app refaz sozinho o item de início quando muda de pasta, por exemplo ao instalar pelo Homebrew em /Applications.
+
 ## 0.2.1
 
 - O Toolbelt fala inglês: segue o idioma do Mac, com a opção de escolher Português ou English nas Configurações.
