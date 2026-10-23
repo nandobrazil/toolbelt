@@ -6,8 +6,6 @@ Tudo instalado em `~/Applications/Toolbelt.app` e no GitHub (`main`). Módulos l
 
 Versão 0.2.0 preparada para distribuição: ícone do app, bundle com versão/build, `cca` e `macscan` dentro do app, hardened runtime e entitlements, login automático via `SMAppService`, atualizador (`AppUpdater`), scripts de release (Developer ID, notarização, DMG, zip, `latest.json`) e landing em https://toolbelt.oconde.dev, no VPS de produção desde 22/10/2026 (ficou algumas horas no de dev; o namespace de lá está parado em zero réplicas esperando o OK do dono para apagar). O projeto também aparece no portfólio em https://oconde.dev/projetos/toolbelt/. **Falta a primeira release**: depende do certificado Developer ID e da credencial do notarytool na máquina (passo a passo em `docs/releasing.md`).
 
-Configuração atual do usuário: ícone "cinto", nada ao lado do cinto (`inlineInfo` vazio), ícones próprios do Claude e do monitor desligados (o usuário desligou ao ver o do Claude colado no cinto), painel com seções Claude e Sistema, alternador em ⌘⇥ (como no AltTab), miniaturas do alternador ligadas, arquivo da área de transferência desligado.
-
 ## Testado e não testado
 
 | Item | Situação |
@@ -56,9 +54,8 @@ Configuração atual do usuário: ícone "cinto", nada ao lado do cinto (`inline
 
 - Investigar por que `panelShowsClaude`/`panelShowsSystem` apareceram `false` sem ação do usuário (foram religados). Se repetir, pode ser bug ao salvar.
 - Contas do Codex (adiado pelo dono em 22/10/2026), igual às do Claude: uma pasta por conta via `CODEX_HOME` (login em `auth.json`), compartilhando `config.toml`, `AGENTS.md`, skills, rules, prompts, `sessions/` e `history.jsonl`. O uso não fica em disco no Codex 0.163: ler pelo `codex app-server` (experimental), método `account/rateLimits/read` (`planType`, `primary`/`secondary` com `usedPercent`, `windowDurationMins`, `resetsAt`), ao abrir o painel, quando o histórico da conta muda e no reset. Testar antes de compartilhar os SQLite de estado entre contas. App desktop do Codex e app do ChatGPT ficam fora (o refresh token gira e uma cópia velha do `auth.json` derruba a sessão).
-- "Abrir terminal com esta conta" usa o Terminal do macOS; o usuário também usa Ghostty: oferecer escolha do terminal.
-- ⌥\` (keyCode 50) pode não existir no teclado ABNT do usuário; ele pode regravar nas Configurações.
+- "Abrir terminal com esta conta" usa o Terminal do macOS: oferecer escolha do terminal (Ghostty, iTerm, WezTerm).
+- ⌥\` (keyCode 50) pode não existir em teclados ABNT; dá para regravar nas Configurações.
 - Alternador: janelas de outros espaços (exige APIs privadas frágeis), modo "apps sem janela".
 - Codenotch (app de terceiros) já lê várias contas (`~/.claude-*`), mas só procura pastas novas ao abrir: reiniciá-lo após `cca add`.
 - Ícone do app (Dock/Finder) e tela de boas-vindas pedindo as permissões.
-- Disco do usuário com ~7% livre: alerta do monitor ativo por isso.

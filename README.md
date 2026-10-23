@@ -25,6 +25,7 @@
   <img alt="Apple Silicon e Intel" src="https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-universal-111">
   <img alt="Notarizado pela Apple" src="https://img.shields.io/badge/notarizado-Developer%20ID-2ea44f">
   <img alt="Versão 0.2.1" src="https://img.shields.io/badge/vers%C3%A3o-0.2.1-C98446">
+  <img alt="Licença GPL-3.0" src="https://img.shields.io/badge/licen%C3%A7a-GPL--3.0-2b6cb0">
 </p>
 
 ---
@@ -114,5 +115,12 @@ O `create-signing-identity.sh` cria uma vez o certificado local, que mantém as 
 - [Arquitetura e módulos](docs/architecture.md)
 - [Como publicar uma versão](docs/releasing.md): Developer ID, notarização, DMG e atualização automática
 - [Estado e decisões](docs/progress.md)
+- [Landing e prévia do app](docs/landing.md)
+
+Contribuições são bem-vindas: abra uma issue para bugs e ideias, ou um pull request. Os testes (`swift test`) rodam no macOS 14, 15 e 26 a cada mudança. Falhas e sugestões também podem ser enviadas de dentro do app, em **Configurações → Ajuda e relatórios**.
+
+## Licença
+
+[GPL-3.0](LICENSE): use, estude, modifique e redistribua à vontade; versões modificadas distribuídas precisam manter o código aberto sob a mesma licença. O nome "Toolbelt" e o ícone identificam este projeto.
 
 <p align="center"><sub>Feito por Fernando Conde · © 2026</sub></p>

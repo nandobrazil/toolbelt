@@ -1,4 +1,4 @@
-# Graph Report - /Users/conde/projects/toolbelt  (2026-10-22)
+# Graph Report - toolbelt  (2026-10-22)
 
 ## Corpus Check
 - Corpus is ~41,663 words - fits in a single context window. You may not need a graph.

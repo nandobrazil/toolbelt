@@ -21,7 +21,7 @@ Onde cada coisa fica:
    (pede a senha de app de forma interativa; nada vai para o repositório).
 3. **Repositório público das releases** (só na primeira vez): `gh repo create nandobrazil/toolbelt-releases --public --description "Downloads do Toolbelt"`.
 4. **Chave do Radar** no Keychain, item **"Toolbelt Radar key"** (conta `toolbelt`): é a chave `rk_…` do projeto Toolbelt em https://radar.oconde.dev, que o `release.sh` embute no app (ambiente `production`) e o `install.sh` embute nos builds locais (ambiente `development`). Sem ela o `release.sh` recusa. Nova chave: Radar → projeto Toolbelt → Configurações → Chaves, e `security add-generic-password -U -a toolbelt -s "Toolbelt Radar key" -w` (pede a chave sem ecoar).
-5. **Backup do certificado:** `Toolbelt - Developer ID Application (Fernando Conde) - backup.p12` no Google Drive; a senha está no Keychain, item "Toolbelt Developer ID .p12 (Google Drive)". Para restaurar noutro Mac: abrir o `.p12` com essa senha.
+5. **Backup do certificado:** exporte o Developer ID como `.p12` com senha forte e guarde fora do repositório, com a senha num gerenciador de senhas. É o mesmo `.p12` do segredo `DEVELOPER_ID_P12` do CI.
 
 ## Regra de versão e tags
 

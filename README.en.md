@@ -25,6 +25,7 @@
   <img alt="Apple Silicon and Intel" src="https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-universal-111">
   <img alt="Notarized by Apple" src="https://img.shields.io/badge/notarized-Developer%20ID-2ea44f">
   <img alt="Version 0.2.1" src="https://img.shields.io/badge/version-0.2.1-C98446">
+  <img alt="License GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-2b6cb0">
 </p>
 
 ---
@@ -114,5 +115,12 @@ scripts/install.sh
 - [Architecture and modules](docs/architecture.md) (Portuguese)
 - [How to publish a release](docs/releasing.md): Developer ID, notarization, DMG and automatic updates (Portuguese)
 - [Status and decisions](docs/progress.md) (Portuguese)
+- [Landing and app preview](docs/landing.md) (Portuguese)
+
+Contributions are welcome: open an issue for bugs and ideas, or a pull request. Tests (`swift test`) run on macOS 14, 15 and 26 on every change. Crashes and suggestions can also be sent from inside the app, in **Settings → Help & reports**.
+
+## License
+
+[GPL-3.0](LICENSE): use, study, modify and redistribute freely; modified versions you distribute must stay open source under the same license. The "Toolbelt" name and icon identify this project.
 
 <p align="center"><sub>Made by Fernando Conde · © 2026</sub></p>
