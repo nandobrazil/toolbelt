@@ -3,6 +3,9 @@ import AppKit
 @_silgen_name("_AXUIElementGetWindow")
 private func axElementWindowIdentifier(_ element: AXUIElement, _ identifier: UnsafeMutablePointer<CGWindowID>) -> AXError
 
+@_silgen_name("GetProcessForPID")
+private func processSerialNumber(for processIdentifier: pid_t, _ serialNumber: UnsafeMutablePointer<ProcessSerialNumber>) -> OSStatus
+
 struct SwitchableWindow {
     let windowID: CGWindowID
     let processIdentifier: pid_t
@@ -47,10 +50,57 @@ struct SwitchableWindow {
         if isMinimized {
             AXUIElementSetAttributeValue(element, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
         }
-        let application = AXUIElementCreateApplication(processIdentifier)
-        AXUIElementSetAttributeValue(application, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+        if !WindowServerFocus.bringToFront(windowID: windowID, processIdentifier: processIdentifier) {
+            let application = AXUIElementCreateApplication(processIdentifier)
+            AXUIElementSetAttributeValue(application, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+        }
         AXUIElementSetAttributeValue(element, kAXMainAttribute as CFString, kCFBooleanTrue)
         AXUIElementPerformAction(element, kAXRaiseAction as CFString)
+    }
+}
+
+private enum WindowServerFocus {
+    private typealias SetFrontProcess = @convention(c) (UnsafeMutablePointer<ProcessSerialNumber>, CGWindowID, UInt32) -> CGError
+    private typealias PostEventRecord = @convention(c) (UnsafeMutablePointer<ProcessSerialNumber>, UnsafeMutablePointer<UInt8>) -> CGError
+
+    private static let userGeneratedMode: UInt32 = 0x200
+    private static let eventRecordSize = 0xf8
+    private static let skyLight = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY)
+    private static let setFrontProcess = function(named: "_SLPSSetFrontProcessWithOptions", as: SetFrontProcess.self)
+    private static let postEventRecord = function(named: "SLPSPostEventRecordTo", as: PostEventRecord.self)
+
+    static func bringToFront(windowID: CGWindowID, processIdentifier: pid_t) -> Bool {
+        guard let setFrontProcess, let postEventRecord else {
+            NSLog("Toolbelt: window server focus unavailable, falling back to accessibility")
+            return false
+        }
+        var process = ProcessSerialNumber()
+        guard processSerialNumber(for: processIdentifier, &process) == noErr else { return false }
+        let result = setFrontProcess(&process, windowID, userGeneratedMode)
+        guard result == .success else {
+            NSLog("Toolbelt: window server focus failed for window \(windowID): \(result.rawValue)")
+            return false
+        }
+        for phase: UInt8 in [0x01, 0x02] {
+            var record = keyWindowRecord(windowID: windowID, phase: phase)
+            _ = postEventRecord(&process, &record)
+        }
+        return true
+    }
+
+    private static func keyWindowRecord(windowID: CGWindowID, phase: UInt8) -> [UInt8] {
+        var record = [UInt8](repeating: 0, count: eventRecordSize)
+        record[0x04] = 0xf8
+        record[0x08] = phase
+        record[0x3a] = 0x10
+        record.replaceSubrange(0x20..<0x30, with: repeatElement(0xff, count: 0x10))
+        withUnsafeBytes(of: windowID.littleEndian) { record.replaceSubrange(0x3c..<0x40, with: $0) }
+        return record
+    }
+
+    private static func function<Function>(named name: String, as type: Function.Type) -> Function? {
+        guard let skyLight, let symbol = dlsym(skyLight, name) else { return nil }
+        return unsafeBitCast(symbol, to: type)
     }
 }
 

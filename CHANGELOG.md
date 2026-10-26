@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5
+
+- O alternador de janelas (⌥⇥) traz para a frente apps que antes ficavam atrás da janela atual, como o Arc.
+
 ## 0.2.4
 
 - Downloads e atualizações passam a sair do repositório do Toolbelt no GitHub, junto com o código.
